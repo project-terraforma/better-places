@@ -3,7 +3,7 @@ import std;
 
 enum Target { santa_cruz, sc=santa_cruz }
 enum Theme { place, building, building_part }
-enum DataFormat { geojson, parquet }
+enum DataFormat { geojson, geoparquet }
 enum Action { fetch, refetch, clean }
 
 string BOUNDING_BOX (Target target) {
