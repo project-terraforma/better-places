@@ -1,0 +1,75 @@
+summary: OMF dataset data/omf/santa_cruz
+
+building: 40705
+	sources:
+		missing sources: 0
+		Microsoft ML Buildings: 35433/40705 (87.05%)
+			confidence: N/A
+			overlaps:
+				total: 17099/35433 (48.26%)
+				OpenStreetMap: 17099/35433 (48.26%)
+		OpenStreetMap: 22371/40705 (54.96%)
+			confidence: N/A
+			overlaps:
+				total: 17099/22371 (76.43%)
+				Microsoft ML Buildings: 17099/22371 (76.43%)
+
+building_part: 410
+	sources:
+		missing sources: 0
+		OpenStreetMap: 410/410 (100.00%)
+			confidence: N/A
+
+place: 7087
+	sources:
+		missing sources: 0
+		DAC: 33/7087 (0.47%)
+			confidence: (coverage 100.00% (33/33))
+				mean 1, min 1, max 1
+				samples: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+			overlaps:
+				total: 33/33 (100.00%)
+				Overture: 33/33 (100.00%)
+		AllThePlaces: 124/7087 (1.75%)
+			confidence: (coverage 100.00% (124/124))
+				mean 0.4, min 0.4, max 0.4
+				samples: [0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4]
+			overlaps:
+				total: 124/124 (100.00%)
+				Overture: 124/124 (100.00%)
+		Overture: 7087/7087 (100.00%)
+			confidence: N/A
+			overlaps:
+				total: 7087/7087 (100.00%)
+				AllThePlaces: 124/7087 (1.75%)
+				DAC: 33/7087 (0.47%)
+				meta: 4870/7087 (68.72%)
+				Foursquare: 909/7087 (12.83%)
+				Microsoft: 1151/7087 (16.24%)
+		meta: 4870/7087 (68.72%)
+			confidence: (coverage 100.00% (4870/4870))
+				mean 0.80396, min 0.323479, max 0.979783
+				samples: [0.323479, 0.950063, 0.950063, 0.323479, 0.950063, 0.323479, 0.950063, 0.950063, 0.950063, 0.950063, 0.323479, 0.950063, 0.950063, 0.950063, 0.323479, 0.950063, 0.950063, 0.639236, 0.950063, 0.950063]
+			overlaps:
+				total: 4870/4870 (100.00%)
+				Overture: 4870/4870 (100.00%)
+		Foursquare: 909/7087 (12.83%)
+			confidence: (coverage 100.00% (909/909))
+				mean 0.77, min 0.77, max 0.77
+				samples: [0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77]
+			overlaps:
+				total: 909/909 (100.00%)
+				Overture: 909/909 (100.00%)
+		Microsoft: 1151/7087 (16.24%)
+			confidence: (coverage 100.00% (1151/1151))
+				mean 0.77, min 0.77, max 0.77
+				samples: [0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77]
+			overlaps:
+				total: 1151/1151 (100.00%)
+				Overture: 1151/1151 (100.00%)
+
+address: 46401
+	sources:
+		missing sources: 0
+		OpenAddresses/CA/Santa Cruz County: 46401/46401 (100.00%)
+			confidence: N/A
