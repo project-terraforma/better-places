@@ -1,4 +1,5 @@
 summary: OMF dataset data/omf/santa_cruz
+bounds: -122.081623,36.946668,-121.932878,37.003170
 
 building: 40705
 	sources:

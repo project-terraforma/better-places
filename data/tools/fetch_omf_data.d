@@ -146,6 +146,27 @@ FetchRequest[] requests (Args a) {
 
 void run (Args a) {
     writefln("fetching %s, %s with format %s", a.themes, a.targets, a.format);
+
+    // write out bounds files if they don't exist
+    foreach (target; (a.targets.length ? a.targets : allValues!Target)) {
+        string targetDirectory = buildPath("data", "omf", target.to!string);
+        string targetBoundsFile = buildPath(targetDirectory, ".bounds.txt");
+
+        if (a.action == Action.clean) {
+            if (targetBoundsFile.exists) {
+                std.file.remove(targetBoundsFile);
+            }
+            continue;
+        }
+        if (!targetBoundsFile.exists) {
+            if (!targetDirectory.exists) {
+                targetDirectory.mkdirRecurse;
+            }
+            std.file.write(targetBoundsFile, BOUNDING_BOX(target));
+        }
+    }
+
+    // run fetch / clean etc requests
     if (a.parallel) {
         foreach (req; a.requests.parallel) {
             req.run();

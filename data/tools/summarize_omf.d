@@ -24,6 +24,14 @@ void summarize (string path, string outputPath) {
 
     scope of = File(outputPath, "w");
     of.writefln("summary: OMF dataset %s", path);
+
+    // read in + write out bounds file
+    auto boundsFile = buildPath(path, ".bounds.txt");
+    if (boundsFile.exists) {
+        auto bounds = std.file.readText(boundsFile).strip.split("\n")[0];
+        of.writefln("bounds: %s", bounds);
+    }
+
     auto dataset = new OmfDataset().loadGeoJson(path);
     dataset.dumpSummary(of);
 }
