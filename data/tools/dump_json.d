@@ -1,96 +1,24 @@
 #!/usr/bin/env rdmd
+import models.geojson;
+import models.omf;
 import std;
 
-struct FeatureCollection {
-    Feature[] features;
-    Feature[UUID] features_by_id;
-}
-struct Feature {
-    UUID     id;
-    Geometry geo;
-    JSONValue[string] props;
-}
-// struct Geometry {
-//     Point[] coords;
-//     Type    type;
-//     enum Type { Point, Polygon }
-// }
-struct Point { float x = 0, y = 0; }
-struct Ring  { Point[] points; }
-struct Polygon { Ring[] rings; }
-struct MultiPolygon { Polygon[] polygons; }
-
-alias Geometry = Algebraic!(Point, Polygon, MultiPolygon);
-
-
-T annotateErr (T)(lazy T expr, lazy string msg, string file = __FILE__, size_t line = __LINE__) {
-    try {
-        return expr;
-    } catch (Throwable e) {
-        throw new Exception(msg, file, line, e);
-    }
-}
-
-Geometry parseGeometry (JSONValue v) {
-    enforce(v.type == JSONType.object);
-    switch (v["type"].str) {
-        case "Point":   return Geometry(v["coordinates"].parsePoint.annotateErr("in (type = %s) %s".format(v["type"], v))); break;
-        case "Polygon": return Geometry(v["coordinates"].parsePolygon.annotateErr("in (type = %s) %s".format(v["type"], v))); break;
-        case "MultiPolygon": return Geometry(v["coordinates"].parseMultiPolygon.annotateErr("in (type = %s) %s".format(v["type"], v))); break;
-        default: enforce(false, "unhandled geometry type %s".format(v));
-    }
-    assert(0);
-}
-Point parsePoint (JSONValue v) {
-    assert(v.type == JSONType.array && v.array.length == 2, "invalid point: %s!".format(v));
-    return Point(v.array[0].floating, v.array[1].floating);
-}
-Ring parseRing (JSONValue v) {
-    assert(v.type == JSONType.array);
-    return Ring(v.array.map!parsePoint.array.annotateErr("in ring '%s'".format(v)));
-}
-Polygon parsePolygon (JSONValue v) {
-    assert(v.type == JSONType.array);
-    return Polygon(v.array.map!parseRing.array.annotateErr("in polygon '%s'".format(v)));
-}
-MultiPolygon parseMultiPolygon (JSONValue v) {
-    assert(v.type == JSONType.array);
-    return MultiPolygon(v.array.map!parsePolygon.array.annotateErr("in multipolygon '%s'".format(v)));
-}
-Feature parseFeature (JSONValue v) {
-    assert(v.type == JSONType.object && v["type"].str == "Feature");
-    auto props = v["properties"].object;
-    auto rawId = props["id"].str
-        .annotateErr(
-            "invalid or missing expected string 'id'\n\tin `%s`\n\t(has keys `%s`)!"
-            .format(props, props.keys));
-    auto id = rawId.parseUUID
-        .annotateErr("invalid id '%s'!".format(props["id"].str));
-    auto geo = v["geometry"].parseGeometry;
-    return Feature(id, geo, props);
-}
-
-FeatureCollection parseFeatures (JSONValue v) {
-    enforce(v.type == JSONType.object && v["type"].str == "FeatureCollection");
-    FeatureCollection result;
-    foreach (feature; v["features"].array) {
-        auto f = feature.parseFeature();
-        result.features ~= f;
-        enforce(f.id !in result.features_by_id, "duplicate feature id! %s".format(f.id));
-        result.features_by_id[f.id] = f;
-    }
-    return result;
-}
-
 void main (){
-    foreach (file; [
-        "building",
-        "building_part",
-        "place"
-    ]) {
-        dump(buildPath("data/omf/santa_cruz", "%s.geojson".format(file)));
-    }
+    // foreach (file; [
+    //     "building",
+    //     "building_part",
+    //     "place"
+    // ]) {
+    //     dump(buildPath("data/omf/santa_cruz", "%s.geojson".format(file)));
+    // }
+    dump(new OmfDataset().loadGeoJson("data/omf/santa_cruz"));
 }
+void dump (OmfDataset data) {
+    writefln("%s buildings",        data.buildings.length);
+    writefln("%s building parts",   data.building_parts.length);
+    writefln("%s places",           data.places.length);
+}
+
 void dump(string path) {
     auto file = path.readText;
     auto data = file.parseJSON;
