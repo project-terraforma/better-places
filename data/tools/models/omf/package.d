@@ -10,9 +10,9 @@ public:
     OmfCollection!Building      building;
     OmfCollection!BuildingPart  building_part;
     OmfCollection!Place         place;
+    OmfCollection!Address       address;
 
-    enum BUILDING = "building", BUILDING_PART = "building_part", PLACE = "place";
-    enum PARTS = [BUILDING, BUILDING_PART, PLACE];
+    enum PARTS = ["building", "building_part", "place", "address"];
 
     This loadGeoJson(string datasetDirectory) {
         auto filePaths = PARTS
@@ -32,10 +32,8 @@ public:
         }
 
         void doLoad (string part, models.geojson.FeatureCollection fc) {
-            final switch (part) {
-                case BUILDING:      building.load(fc); break;
-                case BUILDING_PART: building_part.load(fc); break;
-                case PLACE:         place.load(fc); break;
+            static foreach (PART; PARTS) {
+                if (part == PART) { mixin(PART).load(fc); return; }
             }
         }
         void load (Tuple!(string, string, models.geojson.FeatureCollection) parts) {
@@ -142,7 +140,24 @@ struct Place {
         this.base = OmfFeatureBase(f);
         f.geo.tryVisit!(
             (Point p) { this.pos = p; },
-            () { enforce(false, "invalid BuildingPart geometry! %s".format(f.geo)); }
+            () { enforce(false, "invalid Place geometry! %s".format(f.geo)); }
+        );
+    }
+}
+struct Address {
+    alias This = Address;
+    alias Geometry = Point;
+
+    OmfFeatureBase base; alias base this;
+    Point pos; alias pos geo;
+
+    static This parse (JSONValue v) { return This(v.parseFeature); }
+
+    this (models.geojson.Feature f) {
+        this.base = OmfFeatureBase(f);
+        f.geo.tryVisit!(
+            (Point p) { this.pos = p; },
+            () { enforce(false, "invalid Address geometry! %s".format(f.geo)); }
         );
     }
 }

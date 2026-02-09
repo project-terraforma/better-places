@@ -2,7 +2,7 @@
 import std;
 
 enum Target { santa_cruz, sc=santa_cruz }
-enum Theme { place, building, building_part }
+enum Theme { place, building, building_part, address }
 enum DataFormat { geojson, geoparquet }
 enum Action { fetch, refetch, clean }
 
