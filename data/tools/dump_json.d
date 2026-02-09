@@ -60,8 +60,12 @@ MultiPolygon parseMultiPolygon (JSONValue v) {
 Feature parseFeature (JSONValue v) {
     assert(v.type == JSONType.object && v["type"].str == "Feature");
     auto props = v["properties"].object;
-    auto rawId = props["id"].str;
-    auto id = rawId.parseUUID.annotateErr("invalid id '%s'!".format(rawId));
+    auto rawId = props["id"].str
+        .annotateErr(
+            "invalid or missing expected string 'id'\n\tin `%s`\n\t(has keys `%s`)!"
+            .format(props, props.keys));
+    auto id = rawId.parseUUID
+        .annotateErr("invalid id '%s'!".format(props["id"].str));
     auto geo = v["geometry"].parseGeometry;
     return Feature(id, geo, props);
 }
