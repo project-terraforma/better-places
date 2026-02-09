@@ -20,7 +20,7 @@ public:
             .array;
 
         Tuple!(string,string,models.geojson.FeatureCollection)[] files;
-        auto mutex = new Mutex();
+        scope mutex = new Mutex();
         foreach (parts; filePaths.parallel) {
             auto part = parts[0], path = parts[1];
             auto file = path.readText().annotateErr("error opening '%s'".format(path));
