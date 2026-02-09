@@ -15,9 +15,43 @@ void main (){
 }
 void dump (OmfDataset data) {
     static foreach (part; data.PARTS) {
-        writefln("%s %s", part, mixin("data."~part~".length"));
+        dump(data, part, mixin("data."~part));
     }
 }
+string summarizeGeometry (Point p) {
+    return "Point: (%s, %s)".format(p.x, p.y);
+}
+string summarizeGeometry (Polygon p) {
+    return "Polygon: rings = %s, shape = %s"
+        .format(p.rings.length, p.rings.map!(r => r.points.length));
+}
+string summarizeGeometry (MultiPolygon p) {
+    switch (p.polygons.length) {
+        case 0: return "MultiPolygon: (empty)!";
+        case 1: return p.polygons[0].summarizeGeometry;
+        default: return "MultiPolygon: polygons = %s, shape = %s"
+            .format(p.polygons.length, p.polygons.map!(
+                poly => poly.rings.map!(r => r.points.length).array
+            ).array);
+    }
+}
+
+void dump (T)(OmfDataset data, string name, ref OmfCollection!T part) {
+    writefln("%s: %s", name, part.length);
+    foreach (item; part.items.byValue) {
+        writefln("\n\t%s", item.id);
+        writefln("\n\t\t%s", summarizeGeometry(item.geo));
+        // writefln("\n\t\tGeometry: %s\n\t\t\t%s", item.Geometry.stringof, item.geo);
+        foreach (kv; item.props.byKeyValue) {
+            writef("\t\tprops.%s: ", kv.key);
+            dump(kv.value, 2);
+        }
+    }
+    writefln("%s: %s", name, part.length);
+}
+
+
+
 
 void dump(string path) {
     auto file = path.readText;
