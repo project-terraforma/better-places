@@ -14,9 +14,9 @@ void main (){
     dump(new OmfDataset().loadGeoJson("data/omf/santa_cruz"));
 }
 void dump (OmfDataset data) {
-    writefln("%s buildings",        data.buildings.length);
-    writefln("%s building parts",   data.building_parts.length);
-    writefln("%s places",           data.places.length);
+    static foreach (part; data.PARTS) {
+        writefln("%s %s", part, mixin("data."~part~".length"));
+    }
 }
 
 void dump(string path) {

@@ -7,13 +7,14 @@ import core.sync.mutex;
 class OmfDataset {
 public:
     alias This = OmfDataset;
-    OmfCollection!Building      buildings;
-    OmfCollection!BuildingPart  building_parts;
-    OmfCollection!Place         places;
+    OmfCollection!Building      building;
+    OmfCollection!BuildingPart  building_part;
+    OmfCollection!Place         place;
+
+    enum BUILDING = "building", BUILDING_PART = "building_part", PLACE = "place";
+    enum PARTS = [BUILDING, BUILDING_PART, PLACE];
 
     This loadGeoJson(string datasetDirectory) {
-        enum BUILDING = "building", BUILDING_PART = "building_part", PLACE = "place";
-        enum PARTS = [BUILDING, BUILDING_PART, PLACE];
         auto filePaths = PARTS
             .map!(part => tuple(part, datasetDirectory.buildPath("%s.geojson".format(part))))
             .array;
@@ -32,9 +33,9 @@ public:
 
         void doLoad (string part, models.geojson.FeatureCollection fc) {
             final switch (part) {
-                case BUILDING:      buildings.load(fc); break;
-                case BUILDING_PART: building_parts.load(fc); break;
-                case PLACE:         places.load(fc); break;
+                case BUILDING:      building.load(fc); break;
+                case BUILDING_PART: building_part.load(fc); break;
+                case PLACE:         place.load(fc); break;
             }
         }
         void load (Tuple!(string, string, models.geojson.FeatureCollection) parts) {
