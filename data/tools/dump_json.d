@@ -3,10 +3,10 @@ import std;
 
 struct FeatureCollection {
     Feature[] features;
-    Feature[string] features_by_id;
+    Feature[UUID] features_by_id;
 }
 struct Feature {
-    string   id;
+    UUID     id;
     Geometry geo;
     JSONValue[string] props;
 }
@@ -60,7 +60,8 @@ MultiPolygon parseMultiPolygon (JSONValue v) {
 Feature parseFeature (JSONValue v) {
     assert(v.type == JSONType.object && v["type"].str == "Feature");
     auto props = v["properties"].object;
-    auto id = props["id"].str;
+    auto rawId = props["id"].str;
+    auto id = rawId.parseUUID.annotateErr("invalid id '%s'!".format(rawId));
     auto geo = v["geometry"].parseGeometry;
     return Feature(id, geo, props);
 }
