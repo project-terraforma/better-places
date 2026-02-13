@@ -56,33 +56,6 @@ string summarizeGeometry (MultiPolygon p) {
             ).array);
     }
 }
-
-
-void dump(string path) {
-    auto file = path.readText;
-    auto data = file.parseJSON;
-    writefln("%s: %s", path, data.type);
-    // dump(data, 0);
-    auto res = data.parseFeatures();
-    writefln("%s features", res.features.length);
-
-    size_t point_count = 0, poly_count = 0, multi_count = 0;
-    foreach (feature; res.features) {
-        feature.geo.visit!(
-            (Point p) { ++point_count; },
-            (Polygon p){ ++poly_count; },
-            (MultiPolygon p) { ++multi_count; }
-        );
-        writefln("\n\t%s", feature.id);
-        foreach (kv; feature.props.byKeyValue) {
-            writef("\t\tprops.%s: ", kv.key);
-            dump(kv.value, 2);
-        }
-    }
-    if (point_count) writefln("\tPoints: %s", point_count);
-    if (poly_count) writefln("\tPolygons: %s", poly_count);
-    if (multi_count) writefln("\tMultiPolygons: %s", multi_count);
-}
 void dump(JSONValue v, uint level) {
     writef("%s", v.type);
     final switch (v.type) {

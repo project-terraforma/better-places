@@ -1,26 +1,18 @@
 module models.geojson;
+public import models.geometry;
 public import models.utils;
-public import std.uuid;
 public import std.json;
-public import std.variant;
 import std.algorithm;
 import std.array;
 import std;
 
 struct FeatureCollection {
     Feature[] features;
-    Feature[UUID] features_by_id;
 }
 struct Feature {
-    UUID     id;
     Geometry geo;
     JSONValue[string] props;
 }
-struct Point { float x = 0, y = 0; }
-struct Ring  { Point[] points; }
-struct Polygon { Ring[] rings; }
-struct MultiPolygon { Polygon[] polygons; }
-
 alias Geometry = Algebraic!(Point, Polygon, MultiPolygon);
 
 Geometry parseGeometry (JSONValue v) {
@@ -56,10 +48,8 @@ Feature parseFeature (JSONValue v) {
         .annotateErr(
             "invalid or missing expected string 'id'\n\tin `%s`\n\t(has keys `%s`)!"
             .format(props, props.keys));
-    auto id = rawId.parseUUID
-        .annotateErr("invalid id '%s'!".format(props["id"].str));
     auto geo = v["geometry"].parseGeometry;
-    return Feature(id, geo, props);
+    return Feature(geo, props);
 }
 
 FeatureCollection parseFeatures (JSONValue v) {
@@ -68,8 +58,6 @@ FeatureCollection parseFeatures (JSONValue v) {
     foreach (feature; v["features"].array) {
         auto f = feature.parseFeature();
         result.features ~= f;
-        enforce(f.id !in result.features_by_id, "duplicate feature id! %s".format(f.id));
-        result.features_by_id[f.id] = f;
     }
     return result;
 }
