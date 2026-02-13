@@ -13,7 +13,6 @@ struct Feature {
     Geometry geo;
     JSONValue[string] props;
 }
-alias Geometry = Algebraic!(Point, Polygon, MultiPolygon);
 
 Geometry parseGeometry (JSONValue v) {
     enforce(v.type == JSONType.object);
