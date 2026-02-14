@@ -74,9 +74,169 @@ bool contains (AABB bounds, Point p) {
         p.y < bounds.minv.y || p.y > bounds.maxv.y
     );
 }
-bool contains (Ring r, Point p) {
-    // TODO: raycast algorithm
-    return false;
+bool intersectsRayX (bool INTERSECT_ON_EDGE = false)(Point p, Point a, Point b) {
+    // logic proceeds using points in 'p-space' (ie relative to p)
+    // thus our ray starts at (0,0) and proceeds to +inf along the +x axis
+    auto ax = a.x - p.x, ay = a.y - p.y;
+    auto bx = b.x - p.x, by = b.y - p.y;
+    auto ysign = ay * by;
+
+    // logic:
+    // iff ysign < 0 neither y is 0 (neither point is on ray) and both points are
+    // (y) on opposite sides of the ray
+    if (ysign < 0) {
+        // calculate our x intercept.
+        //
+        // we have an edgecase of (dy = (ay - by) = a.y - b.y) = 0 iff a.y = b.y.
+        // this edgecase is in fact avoided via the ysign branch above:
+        // a) if a.y = 0 (flat horizontal line segment on the ray), ysign will be 0
+        // b) if neither are zero, they are equal (a.y = b.y) iff they share the same
+        //    sign. thus they will be hit by the sign check above
+        //
+        // thus we know that both points are on the opposite side of the line,
+        // neither is zero, and the slope of the line is not zero (it may be infinite
+        // which is fine, as we are multiplying by the inverse of the dy/dx slope,
+        // which will hence give us x = ax - (...) * 0 = ax, which is correct)
+        //
+        // with our x intercept, we have an intersection iff the x intercept is
+        // along the ray itself. ie >= 0, or > 0 depending on whether we want to
+        // count the point being on the polygon edge as an intersection or not.
+        auto x = ax - ay * (ax - bx) / (ay - by);
+        static if (INTERSECT_ON_EDGE) {
+            return x >= 0;
+        } else {
+            return x > 0;
+        }
+    } else {
+        // all other edgecases are handled here.
+        //
+        // we have a few ideas and chained barrier conditions to close this out.
+        //
+        // if ysign is positive both points are nonzero (neither is on the ray),
+        // and both are on the same side of the ray. thus we should return false.
+        //
+        // if ysign is zero that means one or both of the y values are zero
+        // (at least one is on the ray)
+        //
+        // we hack and cheat a bit here by explicitely defining that, irregardless
+        // of our INTERSECT_ON_EDGE condition, if the point lies on a horizontal
+        // vertial line we ignore it. ie if both ay = by = 0 then return false.
+        //
+        // we also have a curious case of intersection rules we need to maintain
+        // for the following two cases where the point lies on or intersects
+        // a vertex with a 'V' shape. We have two major cases split into two
+        // configurations each, and of note these occur with TWO segment
+        // intersections, one of which (even when we want to trigger an
+        // intersection) which needs to be ignored. The cases in detail are
+        // as follows:
+        //
+        // "Horizontal" cases: '^' and 'V' shapes. We wish to IGNORE these.
+        //  (or double count them!). Crossing these does NOT move us inside/
+        // outside of a polygon.
+        //
+        // "Vertical" cases: ie `<` and `>`. Crossing these DOES move us
+        // inside / outside of a polygon.
+        //
+        // We actually have MORE cases (further complicating things), ie piped
+        // elbows from horizontal to angled (up or down) and vertical to
+        // angled (up or down). So yeah actually there are *8* cases here.
+        //
+        // First let's further refine and restate our criteria.
+        //
+        // Horizontal segments as previously mentioned are ignored.
+        // Horizontal sections paired with a non-horizontal one must count
+        // potentially as a polygon interior crossing.
+        //
+        // Vertical segments will be handled similarly to angled ones.
+        // The pitch / slope does not matter but whether it is facing up
+        // or down does.
+        //
+        // We can handle *most* of this with a commonly / typically implemented
+        // rule on upward vs downward facing intersection segments.
+        //
+        // to handle two vertical (ish) segments we count this as an intersection
+        // iff it is facing down. ie if one of our points is on the ray the
+        // other must be *below* the ray.
+        //
+        // conveniently we can handle this as ysign == 0 (ONE of the two points
+        // is on they ray) AND min(ay, by) < 0 (the OTHER of the two points
+        // is below the ray)
+        //
+        // This handles *most* of our edgecases.
+        //
+        // Vertical '<' and ">' (and combo vertical line + elbows, etc): done.
+        // The lower segment (irregardless of horizontal direction) counts as
+        // an intersection, and the upper one does not.
+        //
+        // "Horizontal" 'V' and '^' shaped segments: the former intersects twice
+        // and the latter intersects once. Thus correct.
+        //
+        // This leaves downward and upward facing segments paired with a horizontal
+        // line. This is the last remaining edgecase and is also in fact covered.
+        // Any horizontal lines are ignored. Thus and as we are dealing with rings
+        // this case turns into the '<' and ">' case above. ie the shape ignoring
+        // horizontal segments will look like a combination of vertical segments
+        // that will varyingly look like '>' '/' '|' '\' '<'. A matching segment
+        // will (as a ring) be hit sometime in the future or past. And we do again
+        // wish to only count these once, which is handled in the case of two
+        // segments both with vertices on the ray as counting the lower one
+        // and ignoring the upper.
+        //
+        // in other words this is our `ysign == 0 && min(ay, by) < 0` condition.
+        //
+        if (ysign > 0) return false;
+        // postcondition: ysign = 0, ie either y or both are 0
+        if (ay < 0) { // the a coordinate is nonzero and pointing downwards; b is on the ray
+            return INTERSECT_ON_EDGE ? bx >= 0 : bx > 0;
+        }
+        if (by < 0) { // the b coordinate is nonzero and pointing downards; a is on the ray
+            return INTERSECT_ON_EDGE ? ax >= 0 : ax > 0;
+        }
+        // both points are on the ray with ay = by = 0, in the horizontal case.
+        return false;
+
+        // previous "clever" logic, not correct
+        // static if (INTERSECT_ON_EDGE) {
+        //     return ysign == 0 && min(ay, by) < 0 && max(ax, bx) >= 0;
+        // } else {
+        //     return ysign == 0 && min(ay, by) < 0 && max(ax, bx) > 0;
+        // }
+    }
+}
+
+unittest {
+    assert(Point(4.2,3.4).intersectsRayX(Point(-10,3.4),Point(10,3.4)) == false);
+    assert(Point(4.2,3.4).intersectsRayX(Point(0,0), Point(4.2,3.4)) == true);
+    assert(Point(4.2,3.4).intersectsRayX(Point(0,10), Point(4.2,3.4)) == false);
+    assert(Point(4.2,3.4).intersectsRayX(Point(4.2,3.4),Point(4.2,3.4)) == false);
+
+    assert(Point(4.2,3.4).intersectsRayX(Point(10,10),Point(10,-10)) == true);
+    assert(Point(4.2,3.4).intersectsRayX(Point(10,-10),Point(10,10)) == true);
+
+    assert(Point(4.2,3.4).intersectsRayX(Point(4,10),Point(4,-10)) == false);
+    assert(Point(4.2,3.4).intersectsRayX(Point(4,-10),Point(4,10)) == false);
+
+    assert(Point(4.2,3.4).intersectsRayX(Point(-4.2,10),Point(-4.2,-10)) == false);
+    assert(Point(4.2,3.4).intersectsRayX(Point(-4.2,-10),Point(-4.2,10)) == false);
+
+    assert(Point(-4.2,3.4).intersectsRayX(Point(-4.2,10),Point(-4.2,-10)) == true);
+    assert(Point(-4.2,3.4).intersectsRayX(Point(-4.2,-10),Point(-4.2,10)) == true);
+}
+bool contains (bool INTERSECT_ON_EDGE = false)(Ring r, Point p) {
+    // raycast algorithm along +x axis, in point-space
+    // ray: y = 0, x >= 0
+    size_t intersections = 0;
+    size_t n = r.points.length;
+    for (size_t i = 1; i < n; ++i) {
+        if (p.intersectsRayX!INTERSECT_ON_EDGE(r.points[i-1], r.points[i])) {
+            ++intersections;
+        }
+    }
+    if (p.intersectsRayX!INTERSECT_ON_EDGE(r.points[0], r.points[$-1])) {
+        ++intersections;
+    }
+
+    return (intersections & 1) == 1;
 }
 bool contains (Polygon r, Point p) {
     assert(r.rings.length >= 1);
