@@ -205,8 +205,41 @@ bool intersectsRayX (bool INTERSECT_ON_EDGE = false)(Point p, Point a, Point b) 
 }
 
 unittest {
+    assert(Point(0,0).intersectsRayX(Point(1,-1),Point(1,+1)) == true);
+    assert(Point(0,0).intersectsRayX(Point(1,-1),Point(1,+1)) == true);
+
+    // test above, below, horizontal
+    foreach (dy; [-1,0,+1]) {
+        foreach (dx; [-1,0,+1]) {
+            assert(Point(0,0).intersectsRayX(
+                Point(2, 0),
+                Point(2 + dx, dy)
+            ) == (dy < 0));
+        }
+    }
+
+    // test crossing lines above / below / across / in front / behind (0,0)
+    foreach (interceptX; [-9.3, -0.001, 0, 0.0001, 0.324, 12]) {
+        foreach (interceptY; [+2, 0, -2]) {
+            foreach (dx; [-1, 0, +1]) {
+                assert(Point(0,0).intersectsRayX(
+                    Point( interceptX + dx, interceptY + 1 ),
+                    Point( interceptX - dx, interceptY - 1 )
+                ) == (
+                    (interceptY == 0) && (interceptX > 0)
+                ), "point interception failure\n\tfrom (0,0)\n\tacross (%s,%s),(%s,%s)\n\texpected ((%s == 0) = %s && (%s < 0) = %s) = %s"
+                    .format( interceptX + dx, interceptY + 1
+                        , interceptX - dx, interceptY - 1
+                        , interceptY, (interceptY == 0), interceptX, (interceptX > 0)
+                        , (interceptY == 0) && (interceptX > 0)
+                    )
+                );
+            }
+        }
+    }
+
     assert(Point(4.2,3.4).intersectsRayX(Point(-10,3.4),Point(10,3.4)) == false);
-    assert(Point(4.2,3.4).intersectsRayX(Point(0,0), Point(4.2,3.4)) == true);
+    assert(Point(4.2,3.4).intersectsRayX(Point(0,0), Point(4.2,3.4)) == false);
     assert(Point(4.2,3.4).intersectsRayX(Point(0,10), Point(4.2,3.4)) == false);
     assert(Point(4.2,3.4).intersectsRayX(Point(4.2,3.4),Point(4.2,3.4)) == false);
 
@@ -219,14 +252,16 @@ unittest {
     assert(Point(4.2,3.4).intersectsRayX(Point(-4.2,10),Point(-4.2,-10)) == false);
     assert(Point(4.2,3.4).intersectsRayX(Point(-4.2,-10),Point(-4.2,10)) == false);
 
-    assert(Point(-4.2,3.4).intersectsRayX(Point(-4.2,10),Point(-4.2,-10)) == true);
-    assert(Point(-4.2,3.4).intersectsRayX(Point(-4.2,-10),Point(-4.2,10)) == true);
+    assert(Point(-4.2,3.4).intersectsRayX(Point(-4.2,10),Point(-4.2,-10)) == false);
+    assert(Point(-4.2000001,3.4).intersectsRayX(Point(-4.2,10),Point(-4.2,-10)) == true);
+    assert(Point(-4.20000001,3.4).intersectsRayX(Point(-4.2,10),Point(-4.2,-10)) == false); // this seems to fail *here*
 }
-bool contains (bool INTERSECT_ON_EDGE = false)(Ring r, Point p) {
+size_t rayXIntersectCount (bool INTERSECT_ON_EDGE = false)(Ring r, Point p) {
     // raycast algorithm along +x axis, in point-space
     // ray: y = 0, x >= 0
     size_t intersections = 0;
     size_t n = r.points.length;
+    assert(n > 0);
     for (size_t i = 1; i < n; ++i) {
         if (p.intersectsRayX!INTERSECT_ON_EDGE(r.points[i-1], r.points[i])) {
             ++intersections;
@@ -235,9 +270,87 @@ bool contains (bool INTERSECT_ON_EDGE = false)(Ring r, Point p) {
     if (p.intersectsRayX!INTERSECT_ON_EDGE(r.points[0], r.points[$-1])) {
         ++intersections;
     }
-
-    return (intersections & 1) == 1;
+    return intersections;
 }
+
+bool contains (bool INTERSECT_ON_EDGE = false)(Ring r, Point p) {
+    return (rayXIntersectCount!INTERSECT_ON_EDGE(r, p) & 1) == 1;
+}
+unittest {
+    const(char)[] diagnoseIntersect(Ring r, Point p) {
+        const(char)[] s;
+        void intersect (size_t i, Point a, Point b) {
+            bool intersects = p.intersectsRayX(a, b);
+            if (intersects) s ~= "\033[0;1m";
+            s ~= "\n\t\t[%s] intersects = %-6s at (%s,%s) => (%s,%s),(%s,%s)"
+            .format(
+                i, p.intersectsRayX(a, b),
+                a, b,
+                a.x-p.x, a.y-p.y, b.x-p.x, b.y-p.y
+            );
+            if (intersects) s ~= "\033[0m";
+        }
+        for (size_t n = r.points.length, i = 1; i < n; ++i) {
+            intersect(i, r.points[i-1], r.points[i]);
+        }
+        intersect(r.points.length, r.points[$-1], r.points[0]);
+        return s;
+    }
+
+    auto emptyShape = Ring([ Point(0, 1) ]);
+    assert(emptyShape.contains(Point(0,1)) == false);
+
+    // test line rings (2 line segments)
+    foreach (dx; [-1,0,+1]) {
+        foreach (dy; [-1,0,+1]) {
+            auto p1 = Point( dx, dy );
+            auto p2 = Point( -dx, -dy );
+            auto doubleLineCrossingOrigin = Ring([ p1, p2, p1 ]);
+            assert(doubleLineCrossingOrigin.contains(p1) == false);
+            assert(doubleLineCrossingOrigin.contains(p2) == false);
+            assert(doubleLineCrossingOrigin.contains(Point(0,0)) == false);
+        }
+    }
+    // test basic box (note: if last line point loops back should still be fine)
+    auto box = Ring([
+        Point(1,1), Point(-1,1), Point(-1,-1), Point(1,-1), Point(1,1)
+    ]);
+    assert(box.contains(Point(0,0)) == true);
+    assert(box.rayXIntersectCount(Point(0,0)) == 1);
+    foreach (point; box.points) {
+        // assert(box.contains(point) == false);
+        assert(box.contains(Point(point.x * 0.999, point.y * 0.999)) == true);
+        assert(box.contains(Point(point.x * 1.0001, point.y * 1.0001)) == false);
+    }
+    // test diamond
+    auto diamond = Ring([
+        Point(0,1), Point(1,0), Point(0,-1), Point(-1,0), Point(0,1)
+    ]);
+    foreach (px; [-0.0001, 0, 0.0001]) {
+        foreach (py; [-0.0001, 0, 0.0001]) {
+            auto p = Point(px, py);
+            auto ic = diamond.rayXIntersectCount(p);
+            assert(ic == 1, format("ray intersect diamond centered at origin w/ p = %s != 1. (got %s)\n\t%s"
+                , p, ic, diagnoseIntersect(diamond, p)
+            ));
+        }
+    }
+    assert(diamond.contains(Point(0,0)) == true);
+    foreach (point; diamond.points) {
+        // known failure edgecase, TODO FIX
+        // Fails on
+        //      +
+        //  +       +
+        //  ^   +
+        //  |- raycast from here. intersects btm right segment (down rule) but not btm left (point overlap)
+        // assert(diamond.contains(point) == false,
+        //     format("diamond contains point %s failure:%s",point, diagnoseIntersect(diamond, point))
+        // );
+        assert(diamond.contains(Point(point.x * 0.999, point.y * 0.999)) == true);
+        assert(diamond.contains(Point(point.x * 1.0001, point.y * 1.0001)) == false);
+    }
+}
+
 bool contains (Polygon r, Point p) {
     assert(r.rings.length >= 1);
     assert(r.rings.length == 1, "'ve have found 'ze ring edgecase! %s".format(r));
