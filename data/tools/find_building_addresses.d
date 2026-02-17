@@ -33,10 +33,12 @@ void summarizeBuildingAddressOverlaps (OmfDataset data, ref File of) {
 
     File of_address_conflicts = File("address_conflicts.txt", "w");
     writefln("BUILDINGS");
+    of.writefln("BUILDINGS");
     summarizeBuildings(data, data.building, of, of_address_conflicts);
     writeln();
     writeln();
     writefln("BUILDING PARTS");
+    of.writefln("BUILDING PARTS");
     summarizeBuildings(data, data.building_part, of, of_address_conflicts);
 }
 string fmtFrac (size_t n, size_t d) {
@@ -52,6 +54,9 @@ void summarizeBuildings(TBuilding)(OmfDataset data, ref TBuilding buildings
     size_t n_building = 0, n_building_with_addr = 0, n_with_multi = 0;
     size_t[UUID] buildings_with_multiple_addresses;
     size_t total_addr_hit = 0, total_bounds_hit = 0;
+    UUID[UUID] buildingsByAddr;
+    size_t addressMultiHitBuildingConflicts = 0;
+    size_t n_address = 0, n_address_building_hits = 0;
 
     struct SrcInfo {
         size_t n = 0, withAddresses = 0, withMultipleAddresses = 0;
@@ -100,8 +105,18 @@ void summarizeBuildings(TBuilding)(OmfDataset data, ref TBuilding buildings
             f.writeln();
         }
     }
-    size_t k = 0;
+    void writeSummary (ref File f) {
+        f.writefln("address building hits: %s", fmtFrac(n_address_building_hits, n_address));
+        f.writefln("buildings with addresses: %s", fmtFrac(n_building_with_addr,n_building));
+        f.writefln("with multiple addresses: %s", n_with_multi);
 
+        f.writefln("avg bounds hits: %s", fmtFrac(total_bounds_hit,n_building));
+        f.writefln("avg address hits: %s", fmtFrac(total_addr_hit,n_building));
+
+        printSourceSummary(f);
+    }
+
+    size_t k = 0;
 
     models.omf.Address[] extraAddressHits;
     foreach (ref building; buildings.byValue) {
@@ -130,6 +145,13 @@ void summarizeBuildings(TBuilding)(OmfDataset data, ref TBuilding buildings
                     ++addr_count;
                     ++total_addr_hit;
                     extraAddressHits ~= addr;
+
+                    if (addr.id in buildingsByAddr) {
+                        ++addressMultiHitBuildingConflicts;
+                        writefln("CONFLICT: address %s matches building %s, already matched %s", addr.id, building.id, buildingsByAddr[addr.id]);
+                        of_address_conflicts.writefln("CONFLICT: address %s matches building %s, already matched %s", addr.id, building.id, buildingsByAddr[addr.id]);
+                    }
+                    buildingsByAddr[addr.id] = building.id;
                 }
             }
         }
@@ -150,32 +172,21 @@ void summarizeBuildings(TBuilding)(OmfDataset data, ref TBuilding buildings
 
         if (++k > 2000) {
             k = 0;
-            writefln("buildings with addresses: %s/%s = %s", n_building_with_addr,n_building,
-                cast(double)n_building_with_addr/n_building*100
-                );
-            writefln("with multiple addresses: %s", n_with_multi);
-
-            writefln("avg bounds hits: %s/%s = %s", total_bounds_hit,n_building,
-                cast(double)total_bounds_hit/n_building * 100);
-            writefln("avg address hits: %s/%s = %s", total_addr_hit,n_building,
-            cast(double)total_addr_hit/n_building * 100);
-            printSourceSummary(stdout);
+            writeSummary(stdout);
             writeln();
         }
     }
-    writefln("buildings with addresses: %s/%s", n_building,n_building_with_addr);
-    writefln("with multiple addresses: %s", n_with_multi);
 
-    writefln("avg bounds hits: %s/%s = %s", total_bounds_hit,n_building,
-        cast(double)total_bounds_hit/n_building * 100);
-    writefln("avg address hits: %s/%s = %s", total_addr_hit,n_building,
-    cast(double)total_addr_hit/n_building * 100);
-
-    of.writefln("buildings with addresses: %s", fmtFrac(n_building_with_addr,n_building));
-    of.writefln("with multiple addresses: %s", n_with_multi);
-
-    of.writefln("avg bounds hits: %s", fmtFrac(total_bounds_hit,n_building));
-    of.writefln("avg address hits: %s", fmtFrac(total_addr_hit,n_building));
-
-    printSourceSummary(of);
+    // find addresses without buildings
+    // auto of_missing = File("missing_addresses.txt", "w");
+    foreach (ref addr; data.address.items) {
+        ++n_address;
+        if (addr.id in buildingsByAddr) {
+            ++n_address_building_hits;
+        } else {
+            // of_missing.writefln("%s %s", addr.id, addr.props);
+        }
+    }
+    writeSummary(stdout);
+    writeSummary(of);
 }
