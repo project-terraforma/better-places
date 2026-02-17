@@ -1,5 +1,6 @@
 #!/usr/bin/env rdmd
 import models.omf;
+import models.geometry;
 import std;
 
 void main (){

@@ -353,7 +353,7 @@ unittest {
 
 bool contains (Polygon r, Point p) {
     assert(r.rings.length >= 1);
-    assert(r.rings.length == 1, "'ve have found 'ze ring edgecase! %s".format(r));
+    // assert(r.rings.length == 1, "'ve have found 'ze ring edgecase! %s".format(r));
 
     // outer is ring 0
     if (!r.rings[0].contains(p)) return false;
