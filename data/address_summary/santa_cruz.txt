@@ -1,0 +1,143 @@
+buildings with addresses: 19712/40705 (48.43%)
+with multiple addresses: 3293
+avg bounds hits: 39268/40705 (96.47%)
+avg address hits: 31475/40705 (77.32%)
+
+statistics by source:
+	Microsoft ML Buildings: count 35433/40705 (87.05%)
+		with addresses: 18782/35433 (53.01%)
+		with multiple addresses: 3060/35433 (8.64%)
+		max address count: 235
+		multi address distribution:
+			2: 1719
+			3: 409
+			4: 411
+			5: 128
+			6: 94
+			7: 50
+			8: 60
+			9: 14
+			10: 19
+			11: 14
+			12: 17
+			13: 5
+			14: 6
+			15: 6
+			16: 24
+			17: 1
+			18: 6
+			19: 5
+			20: 6
+			21: 1
+			22: 3
+			23: 2
+			24: 2
+			25: 1
+			26: 3
+			27: 4
+			28: 1
+			29: 2
+			30: 5
+			31: 3
+			32: 1
+			34: 1
+			35: 1
+			38: 3
+			39: 1
+			40: 2
+			43: 2
+			45: 2
+			48: 1
+			51: 2
+			54: 2
+			55: 1
+			56: 1
+			68: 2
+			69: 1
+			71: 2
+			76: 2
+			81: 1
+			97: 1
+			100: 1
+			115: 1
+			121: 1
+			130: 1
+			131: 1
+			144: 1
+			147: 1
+			148: 1
+			183: 1
+			235: 1
+
+	OpenStreetMap: count 22371/40705 (54.96%)
+		with addresses: 11039/22371 (49.35%)
+		with multiple addresses: 2001/22371 (8.94%)
+		max address count: 235
+		multi address distribution:
+			2: 992
+			3: 287
+			4: 301
+			5: 94
+			6: 75
+			7: 40
+			8: 56
+			9: 14
+			10: 18
+			11: 12
+			12: 13
+			13: 5
+			14: 4
+			15: 7
+			16: 15
+			17: 1
+			18: 4
+			19: 6
+			20: 5
+			21: 1
+			22: 3
+			23: 3
+			24: 1
+			25: 1
+			26: 3
+			27: 4
+			29: 2
+			30: 3
+			31: 3
+			34: 2
+			36: 1
+			38: 1
+			40: 1
+			41: 1
+			43: 1
+			44: 1
+			45: 2
+			48: 1
+			49: 1
+			51: 2
+			54: 2
+			55: 1
+			67: 1
+			69: 1
+			70: 1
+			71: 1
+			75: 1
+			76: 1
+			78: 1
+			83: 1
+			100: 1
+			147: 1
+			235: 1
+
+buildings with addresses: 2/410 (0.49%)
+with multiple addresses: 1
+avg bounds hits: 4/410 (0.98%)
+avg address hits: 3/410 (0.73%)
+
+statistics by source:
+	OpenStreetMap: count 410/410 (100.00%)
+		with addresses: 2/410 (0.49%)
+		with multiple addresses: 1/410 (0.24%)
+		max address count: 2
+		multi address distribution:
+			2: 1
+
