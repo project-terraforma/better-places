@@ -1,0 +1,92 @@
+BUILDINGS
+place building hits: 4106/7087 (57.94%)
+buildings with places: 1773/40705 (4.36%)
+with multiple places: 711
+avg bounds hits: 5385/40705 (13.23%)
+avg place hits: 4108/40705 (10.09%)
+
+statistics by source:
+	Microsoft ML Buildings: count 35433/40705 (87.05%)
+		with places: 1441/35433 (4.07%)
+		with multiple places: 564/35433 (1.59%)
+		max place count: 50
+		multi place distribution:
+			2: 246
+			3: 132
+			4: 48
+			5: 35
+			6: 21
+			7: 14
+			8: 17
+			9: 11
+			10: 6
+			11: 3
+			12: 5
+			13: 2
+			14: 2
+			15: 1
+			16: 5
+			17: 1
+			18: 2
+			19: 5
+			20: 1
+			21: 1
+			22: 1
+			24: 1
+			33: 1
+			39: 1
+			43: 1
+			50: 1
+
+	OpenStreetMap: count 22371/40705 (54.96%)
+		with places: 1516/22371 (6.78%)
+		with multiple places: 673/22371 (3.01%)
+		max place count: 102
+		multi place distribution:
+			2: 292
+			3: 160
+			4: 58
+			5: 42
+			6: 27
+			7: 20
+			8: 17
+			9: 11
+			10: 6
+			11: 4
+			12: 5
+			13: 3
+			14: 3
+			15: 1
+			16: 5
+			17: 1
+			18: 2
+			19: 5
+			20: 1
+			21: 1
+			22: 1
+			23: 1
+			24: 1
+			31: 1
+			33: 1
+			39: 1
+			43: 1
+			50: 1
+			102: 1
+
+BUILDING PARTS
+place building hits: 23/7087 (0.32%)
+buildings with places: 14/410 (3.41%)
+with multiple places: 4
+avg bounds hits: 50/410 (12.20%)
+avg place hits: 25/410 (6.10%)
+
+statistics by source:
+	OpenStreetMap: count 410/410 (100.00%)
+		with places: 14/410 (3.41%)
+		with multiple places: 4/410 (0.98%)
+		max place count: 5
+		multi place distribution:
+			2: 1
+			4: 2
+			5: 1
+
