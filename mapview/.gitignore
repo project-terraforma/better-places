@@ -1,0 +1,17 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/mapview
+mapview.so
+mapview.dylib
+mapview.dll
+mapview.a
+mapview.lib
+mapview-test-*
+*.exe
+*.pdb
+*.o
+*.obj
+*.lst
+libraylib*

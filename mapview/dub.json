@@ -1,0 +1,1 @@
+{"libs" : ["raylib"], "lflags-posix" : ["-L."], "lflags-osx" : ["-rpath", "@executable_path/"], "lflags-linux" : ["-rpath=$$ORIGIN"], "description" : "experimental map viewer", "name" : "mapview", "dependencies" : {"raylib-d" : "~>5.5.3"}, "authors" : ["Seiji Emery"], "copyright" : "Copyright © 2026, Seiji Emery", "license" : "Apache-2.0"}
