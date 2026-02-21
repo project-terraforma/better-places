@@ -138,6 +138,11 @@ public:
             // viewBounds.maxv.y = viewCenter.y + viewSz.y * 0.5;
             viewBounds = viewBounds.scaledAroundCenter(resize);
         // }
+        //
+        if (data) {
+            auto tr = MapRenderer.ViewTransform(cast(MapView)this);
+            textf("cursor pos: %s", tr.cursorPos);
+        }
     }
 }
 
@@ -208,6 +213,7 @@ class MapRenderer {
         AABB viewBounds;
         Point mapToScreenScale;
         Point mapToScreenOffset;
+        Point cursorPos; // mouse cursor position, transformed into geo Point space
 
         this (const MapView view) {
             this.viewBounds = view.viewBounds;
@@ -222,8 +228,17 @@ class MapRenderer {
             );
             this.mapToScreenOffset = viewBounds.minv;
 
-            this.viewBounds = viewBounds.scaledAroundCenter(0.5); // for debugging view culling
+            auto m = GetMousePosition();
+            this.cursorPos = transformScreenToGeoSpace(m);
+            // this.viewBounds = viewBounds.scaledAroundCenter(0.5); // for debugging view culling
         }
+        Point transformScreenToGeoSpace (Vector2 p) {
+            return Point(
+                (p.x / mapToScreenScale.x) + mapToScreenOffset.x,
+                (p.y / mapToScreenScale.y) + mapToScreenOffset.y
+            );
+        }
+
         Vector2 transform (Point p) {
             p.x -= mapToScreenOffset.x;
             p.y -= mapToScreenOffset.y;
@@ -272,14 +287,14 @@ class MapRenderer {
             draw(poly, color, tr);
         }
     }
-    void draw (AABB r, Color color, ViewTransform tr) {
+    void draw (AABB r, Color color, ViewTransform tr, float lineThickness = 1) {
         if (!tr.viewBounds.contains(r)) return;
         auto a = tr.transform(r.minv), b = tr.transform(r.maxv);
-        DrawLineV(a, Vector2(b.x, a.y), color);
-        DrawLineV(a, Vector2(a.x, b.y), color);
+        DrawLineEx(a, Vector2(b.x, a.y), lineThickness, color);
+        DrawLineEx(a, Vector2(a.x, b.y), lineThickness, color);
 
-        DrawLineV(b, Vector2(a.x, b.y), color);
-        DrawLineV(b, Vector2(b.x, a.y), color);
+        DrawLineEx(b, Vector2(a.x, b.y), lineThickness, color);
+        DrawLineEx(b, Vector2(b.x, a.y), lineThickness, color);
     }
     void draw (Point p, Color color, ViewTransform tr) {
         if (!tr.viewBounds.contains(p)) return;
@@ -316,7 +331,7 @@ class MapRenderer {
             this.rings ~= cast(uint)r.points.length;
             foreach (p; r.points) this.bounds.grow(p);
         }
-        void draw (MapRenderer r, Color color, ViewTransform tr) {
+        void draw (MapRenderer r, Color color, ViewTransform tr, float lineThickness = 1) {
             uint start = 0;
             foreach (ring; this.rings) {
                 uint n = ring, end = start + n;
@@ -325,7 +340,7 @@ class MapRenderer {
                 Vector2 a = p0;
                 for (uint i = start + 1; i < end; ++i) {
                     Vector2 b = tr.transform(this.points[i]);
-                    DrawLineV(a, b, color);
+                    DrawLineEx(a, b, lineThickness, color);
                     a = b;
                 }
                 // DrawLineV(a, p0, color);
@@ -360,8 +375,19 @@ class MapRenderer {
         if (!geoCache.inBounds(item, tr)) return;
         CachedGeometry* g = &(geoCache.get(item));
         if (tr.viewBounds.contains(g.bounds)) {
-            draw(g.bounds, Colors.RED, tr);
-            g.draw(this, Colors.BLUE, tr);
+            bool mouseover = false;
+            float boundsLineThickness = 1;
+            float polyLineThickness = 1;
+            enum MOUSEOVER_LINE_THICKNESS = 3;
+            if (g.bounds.contains(tr.cursorPos)) {
+                boundsLineThickness = MOUSEOVER_LINE_THICKNESS;
+                mouseover = item.geo.contains(tr.cursorPos);
+                if (mouseover) {
+                    polyLineThickness = MOUSEOVER_LINE_THICKNESS;
+                }
+            }
+            draw(g.bounds, Colors.RED, tr, boundsLineThickness);
+            g.draw(this, Colors.BLUE, tr, polyLineThickness);
         }
         // draw(item.geo, Colors.GREEN, tr);
     }
@@ -369,9 +395,9 @@ class MapRenderer {
         draw(item.geo, Colors.BLUE, tr);
     }
     void render (const MapView view, ref const Place item, ViewTransform tr) {
-        draw(item.geo, Colors.RED, tr);
+        // draw(item.geo, Colors.RED, tr);
     }
     void render (const MapView view, ref const models.omf.Address item, ViewTransform tr) {
-        draw(item.geo, Colors.PURPLE, tr);
+        // draw(item.geo, Colors.PURPLE, tr);
     }
 }

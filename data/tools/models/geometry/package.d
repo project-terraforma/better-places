@@ -420,3 +420,8 @@ bool contains (Geometry g, Point p) {
 bool contains (TGeometry)(AABB bounds, TGeometry geometry, Point p) {
     return bounds.contains(p) && geometry.contains(p);
 }
+
+
+bool contains (const MultiPolygon r, Point p) {
+    return contains(cast(MultiPolygon)r, p);
+}
