@@ -44,14 +44,11 @@ There are *intentionally* two different point / vec2 types in use here.
   * the `AABB` implementation (ours) uses simple `min/max` values as the primary use there is working with polygons (`Ring`s, and compositions of `Ring`s) and bounds checking, both of which are slightly more efficient using just min/max values
   * for working extensively with rect calculations (UI etc) the point + bounds approach is generally better as you will often ideally be working with those separated components. /2c
 
-## TODO
+#### TODO
 
-* webmercator map projection (currenly using RAW lat/long => screenspace, which obviously produces minor x/y distortion errors without a spherical (or janky ass webmercator) projection)
-* map panning
-* mouseover
-* viewing data / props
+* webmercator map projection (currenly using RAW lat/long => screenspace, which obviously produces geometry distortion errors, but is fine / workable as is)
 * search + go-to
 * view filtering (and/or toolkit for easy view filtering)
-* better / faster data backend
+* better / faster data backend (flexgrid?)
 * better rendering
 * etc
