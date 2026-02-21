@@ -45,8 +45,18 @@ public:
     double maxZoomLevel = +2;
 
     AABB viewBounds; // current view bounds
+    bool draggingView = false;
+    Point dragViewStart;
+    Point viewPos = Point(0, 0);
+    Point viewVel = Point(0, 0);
 
-    this (string exeDir) { this.exeDir = exeDir; this.r = new MapRenderer(); }
+    @property AABB viewPosLimits () const {
+        return vb0.scaledAroundCenter(10.0);
+    }
+
+    this (string exeDir) {
+        this.exeDir = exeDir; this.r = new MapRenderer();
+    }
     void loadAsync(){
         enforce(!dataLoading);
         dataLoading = true;
@@ -89,13 +99,84 @@ public:
 
     void textf(TArgs...)(TArgs args) { r.textf(args); }
 
+    private void recalcViewBounds () {
+        // this.viewBounds = this.vb0.scaledAroundCenter(pow(10, -this.zoomLevel));
+        auto bounds  = this.vb0;
+        Point center = bounds.center;
+        Point size   = bounds.size;
+
+        center.x += viewPos.x;
+        center.y += viewPos.y;
+
+        auto scale = pow(10, -this.zoomLevel);
+        size.x *= scale;
+        size.y *= scale;
+
+        this.viewBounds = AABB(
+            Point(
+                center.x - size.x * 0.5,
+                center.y - size.y * 0.5,
+            ),
+            Point(
+                center.x + size.x * 0.5,
+                center.y + size.y * 0.5
+            )
+        );
+
+        // this.viewBounds.minv.x += viewPos.x;
+        // this.viewBounds.minv.y += viewPos.y;
+        // this.viewBounds.maxv.x += viewPos.x;
+        // this.viewBounds.maxv.x += viewPos.y;
+
+        // this.viewBounds = this.viewBounds.scaledAroundCenter(pow(10, -this.zoomLevel));
+    }
     void update () {
         textf("view bounds: %s", viewBounds);
+        textf("view size:   %s", viewBounds.size);
 
         float dt = GetFrameTime();
         textf("dt: %s", dt);
         textf("FPS: %s", 1/dt);
 
+        // handle mouse dragging
+        bool startDrag = false; // ignore 1st frame of mouse drag
+        if (!draggingView && IsMouseButtonDown(0)) {
+            draggingView = true;
+            startDrag = true;
+        } else if (draggingView && !IsMouseButtonDown(0)) {
+            draggingView = false;
+        }
+        if (draggingView && !startDrag) {
+            // actually just work off of mouse delta?
+            Vector2 mouseDelta = GetMouseDelta();
+            auto transform = MapRenderer.ViewTransform(this);
+            // Point worldDelta = transform.transformScreenToGeoSpace(mouseDelta);
+            Point worldDelta = Point(
+                mouseDelta.x / transform.mapToScreenScale.x,
+                mouseDelta.y / transform.mapToScreenScale.y
+            );
+            auto limits = this.viewPosLimits;
+            viewPos.x = (viewPos.x + worldDelta.x)
+                ;//.clamp(limits.minv.x, limits.maxv.x);
+            viewPos.y = (viewPos.y + worldDelta.y);//.clamp(limits.minv.y, limits.maxv.y);
+            recalcViewBounds();
+
+            textf("view limits: %s", limits);
+            textf("mouse delta: %s", mouseDelta);
+            textf("world delta: %s", worldDelta);
+            textf("view pos:    %s", viewPos);
+
+            viewVel = worldDelta;
+        } else {
+            textf("view pos: %s", viewPos);
+
+            auto falloff = (1.0 - dt.clamp(0, 1) * 0.5);
+            viewVel.x *= falloff;
+            viewVel.y *= falloff;
+
+            viewPos.x += viewVel.x;
+            viewPos.y += viewVel.y;
+        }
         float scroll = GetMouseWheelMove();
         textf("scroll: %s", 100 * scroll * dt);
 
@@ -134,7 +215,7 @@ public:
             zoomLevel = clamped;
         }
         textf("zoom = %s (%s)", this.zoomLevel, std.math.log(zoomLevel));
-        this.viewBounds = this.vb0.scaledAroundCenter(pow(10, -this.zoomLevel));
+        recalcViewBounds();
 
         if (data) {
             auto tr = MapRenderer.ViewTransform(cast(MapView)this);
@@ -384,7 +465,22 @@ class MapRenderer {
                 }
             }
             draw(g.bounds, Colors.RED, tr, boundsLineThickness);
-            g.draw(this, Colors.BLUE, tr, polyLineThickness);
+
+            uint src = 0;
+            foreach (s; item.props["sources"].array) {
+                switch (s.object["dataset"].str) {
+                    case "OpenStreetMap":           src |= 1; break;
+                    case "Microsoft ML Buildings":  src |= 2; break;
+                    default:
+                }
+            }
+            immutable Color[4] COLORS_BY_SRC = [
+                Colors.BLUE,
+                Colors.ORANGE,
+                Colors.PURPLE,
+                Colors.GREEN
+            ];
+            g.draw(this, COLORS_BY_SRC[src], tr, polyLineThickness);
 
             if (mouseover) {
                 textf("Building %s", item.id);
