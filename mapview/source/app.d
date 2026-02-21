@@ -11,7 +11,7 @@ void main(string[] args) {
 
     // call this before using raylib
     validateRaylibBinding();
-    InitWindow(800, 600, "Hello, Raylib-D!");
+    InitWindow(800, 600, "better-places map viewer (rough prototype)");
     SetTargetFPS(60);
     while (!WindowShouldClose())
     {
@@ -357,6 +357,7 @@ class MapRenderer {
     GeoCache geoCache;
 
     void render (const MapView view, ref const Building item, ViewTransform tr) {
+        if (!geoCache.inBounds(item, tr)) return;
         CachedGeometry* g = &(geoCache.get(item));
         if (tr.viewBounds.contains(g.bounds)) {
             draw(g.bounds, Colors.RED, tr);
