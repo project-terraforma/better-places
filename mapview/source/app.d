@@ -87,6 +87,9 @@ public:
         textf("view bounds: %s", viewBounds);
 
         float dt = GetFrameTime();
+        textf("dt: %s", dt);
+        textf("FPS: %s", 1/dt);
+
         float scroll = GetMouseWheelMove();
         textf("scroll: %s", 100 * scroll * dt);
 
@@ -110,7 +113,12 @@ public:
         // if (scroll) {
             // adjust view size: bigger or smaller
             enum SCROLL_SENSITIVITY = 10.0;
-            double scrollInput = cast(double)scroll * dt * SCROLL_SENSITIVITY;
+            enum USE_DT = true;
+            static if (USE_DT) {
+                double scrollInput = cast(double)scroll * dt * SCROLL_SENSITIVITY;
+            } else {
+                double scrollInput = cast(double)scroll * SCROLL_SENSITIVITY / 10.0;
+            }
             double resize = 1.0 - scrollInput;
             viewSz.x *= resize;
             viewSz.y *= resize;
@@ -191,6 +199,81 @@ class MapRenderer {
         if (!loaded) load();
         textLayoutPosY = 0;
     }
+    struct ViewTransform {
+        AABB viewBounds;
+        Point mapToScreenScale;
+
+        this (const MapView view) {
+            this.viewBounds = view.viewBounds;
+            auto screenSize = Point(GetScreenWidth(), GetScreenHeight());
+            auto viewSize = Point(
+                viewBounds.maxv.x - viewBounds.minv.x,
+                viewBounds.maxv.y - viewBounds.minv.y
+            );
+            this.mapToScreenScale = Point(
+                screenSize.x / viewSize.x,
+                screenSize.y / viewSize.y,
+            );
+        }
+        Vector2 transform (Point p) {
+            p.x -= viewBounds.minv.x;
+            p.y -= viewBounds.minv.y;
+            p.x *= mapToScreenScale.x;
+            p.y *= mapToScreenScale.y;
+            return Vector2(p.x, p.y);
+        }
+    }
     void render (MapView view) {
+        auto data = view.data;
+        if (!data) {
+            textf("MISSING MAP OBJECT!");
+        } else {
+            render(view, cast(const(OmfDataset))data);
+        }
+    }
+    void render (MapView view, const(OmfDataset) data) {
+        assert(data !is null);
+        auto tr = ViewTransform(view);
+        static foreach (part; data.PARTS) {
+            render(view, mixin("data."~part), tr);
+        }
+    }
+    void render (T)(const MapView view, ref const(OmfCollection!T) data, ViewTransform tr) {
+        foreach (kv; data.items.byKeyValue) {
+            render(view, kv.value, tr);
+        }
+    }
+    void drawLine(Point a, Point b, Color color, ViewTransform tr) {
+        auto p1 = tr.transform(a), p2 = tr.transform(b);
+        DrawLineV(p1, p2, color);
+    }
+    void draw (const Ring ring, Color color, ViewTransform tr) {
+        size_t n = ring.points.length;
+        for (size_t i = 1; i < n; ++i) {
+            drawLine(ring.points[i-1], ring.points[i], color, tr);
+        }
+    }
+    void draw (const Polygon p, Color color, ViewTransform tr) {
+        foreach (ring; p.rings) {
+            draw(ring, color, tr);
+        }
+    }
+    void draw (const MultiPolygon mp, Color color, ViewTransform tr) {
+        foreach (poly; mp.polygons) {
+            draw(poly, color, tr);
+        }
+    }
+
+    void render (const MapView view, ref const Building item, ViewTransform tr) {
+        draw(item.geo, Colors.GREEN, tr);
+    }
+    void render (const MapView view, ref const BuildingPart item, ViewTransform tr) {
+        draw(item.geo, Colors.BLUE, tr);
+    }
+    void render (const MapView view, ref const Place item, ViewTransform tr) {
+
+    }
+    void render (const MapView view, ref const models.omf.Address item, ViewTransform tr) {
+
     }
 }
