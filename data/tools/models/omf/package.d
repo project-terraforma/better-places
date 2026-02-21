@@ -47,7 +47,6 @@ public:
         }
         return this;
     }
-
 }
 
 struct OmfCollection (TFeature) {

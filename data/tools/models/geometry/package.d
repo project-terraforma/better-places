@@ -33,6 +33,10 @@ struct AABB {
             this.maxv = Point(maxx, maxy);
         }
 
+    this (Point p) {
+        this.minv = this.maxv = p;
+    }
+
     this (Ring r) { assign(r); }
     this (Polygon r) { assign(r); }
     this (MultiPolygon r) { assign(r); }
@@ -67,6 +71,35 @@ struct AABB {
             assign(mp.polygons[0]);
             if (mp.polygons.length > 1) foreach (p; mp.polygons[1..$]) grow(p);
         }
+
+    Point size () const {
+        return Point(
+            maxv.x - minv.x,
+            maxv.y - minv.y
+        );
+    }
+    Point center () const {
+        return Point(
+            (maxv.x + minv.x) * 0.5,
+            (maxv.y + minv.y) * 0.5,
+        );
+    }
+    AABB scaledAroundCenter (double scaleX, double scaleY) const {
+        auto s = size();
+        auto c = center();
+        s.x *= scaleX;
+        s.y *= scaleY;
+        return AABB(
+            Point(c.x - s.x * 0.5, c.y - s.y * 0.5),
+            Point(c.x + s.x * 0.5, c.y + s.y * 0.5),
+        );
+    }
+    AABB scaledAroundCenter(Point scale) const {
+        return scaledAroundCenter(scale.x, scale.y);
+    }
+    AABB scaledAroundCenter(double scale) const {
+        return scaledAroundCenter(scale, scale);
+    }
 }
 bool contains (AABB bounds, Point p) {
     return !(
@@ -74,6 +107,13 @@ bool contains (AABB bounds, Point p) {
         p.y < bounds.minv.y || p.y > bounds.maxv.y
     );
 }
+bool contains (AABB a, AABB b) {
+    return !(
+        a.maxv.x < b.minv.x || a.minv.x > b.maxv.x ||
+        a.maxv.y < b.minv.y || a.minv.y > b.maxv.y
+    );
+}
+
 bool intersectsRayX (bool INTERSECT_ON_EDGE = false)(Point p, Point a, Point b) {
     // logic proceeds using points in 'p-space' (ie relative to p)
     // thus our ray starts at (0,0) and proceeds to +inf along the +x axis

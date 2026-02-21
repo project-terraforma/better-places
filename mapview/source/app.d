@@ -119,19 +119,24 @@ public:
             } else {
                 double scrollInput = cast(double)scroll * SCROLL_SENSITIVITY / 10.0;
             }
-            double resize = 1.0 - scrollInput;
-            viewSz.x *= resize;
-            viewSz.y *= resize;
+            double resize  = 1.0 - scrollInput;
+            double minSize = 0.000001;
+            textf("view size %s vs minsize %s", viewSz, minSize);
 
+            // if (resize > 1 || min(viewSz.x, viewSz.y) * resize > minSize) {
+                viewSz.x *= resize;
+                viewSz.y *= resize;
+            // }
             textf("ScrollInput: %s => resize %s", scrollInput, resize);
             textf("=> viewSz %s", viewSz);
 
             // reapply / recalc bounds
-            viewBounds.minv.x = viewCenter.x - viewSz.x * 0.5;
-            viewBounds.minv.y = viewCenter.y - viewSz.y * 0.5;
+            // viewBounds.minv.x = viewCenter.x - viewSz.x * 0.5;
+            // viewBounds.minv.y = viewCenter.y - viewSz.y * 0.5;
 
-            viewBounds.maxv.x = viewCenter.x + viewSz.x * 0.5;
-            viewBounds.maxv.y = viewCenter.y + viewSz.y * 0.5;
+            // viewBounds.maxv.x = viewCenter.x + viewSz.x * 0.5;
+            // viewBounds.maxv.y = viewCenter.y + viewSz.y * 0.5;
+            viewBounds = viewBounds.scaledAroundCenter(resize);
         // }
     }
 }
@@ -202,6 +207,7 @@ class MapRenderer {
     struct ViewTransform {
         AABB viewBounds;
         Point mapToScreenScale;
+        Point mapToScreenOffset;
 
         this (const MapView view) {
             this.viewBounds = view.viewBounds;
@@ -214,10 +220,13 @@ class MapRenderer {
                 screenSize.x / viewSize.x,
                 screenSize.y / viewSize.y,
             );
+            this.mapToScreenOffset = viewBounds.minv;
+
+            this.viewBounds = viewBounds.scaledAroundCenter(0.5); // for debugging view culling
         }
         Vector2 transform (Point p) {
-            p.x -= viewBounds.minv.x;
-            p.y -= viewBounds.minv.y;
+            p.x -= mapToScreenOffset.x;
+            p.y -= mapToScreenOffset.y;
             p.x *= mapToScreenScale.x;
             p.y *= mapToScreenScale.y;
             return Vector2(p.x, p.y);
@@ -263,17 +272,105 @@ class MapRenderer {
             draw(poly, color, tr);
         }
     }
+    void draw (AABB r, Color color, ViewTransform tr) {
+        if (!tr.viewBounds.contains(r)) return;
+        auto a = tr.transform(r.minv), b = tr.transform(r.maxv);
+        DrawLineV(a, Vector2(b.x, a.y), color);
+        DrawLineV(a, Vector2(a.x, b.y), color);
+
+        DrawLineV(b, Vector2(a.x, b.y), color);
+        DrawLineV(b, Vector2(b.x, a.y), color);
+    }
+    void draw (Point p, Color color, ViewTransform tr) {
+        if (!tr.viewBounds.contains(p)) return;
+        DrawPoly(
+            tr.transform(p), 3, 10, 0, color
+        );
+    }
+    struct CachedGeometry {
+        AABB    bounds;
+        Point[] points;
+        uint[]  rings;
+
+        this (const Polygon p) {
+            assert(p.rings.length);
+            assert(p.rings[0].points.length);
+            this.bounds = AABB(p.rings[0].points[0]);
+            foreach (ring; p.rings) insert(ring);
+        }
+        this (const MultiPolygon p) {
+            assert(p.polygons.length);
+            assert(p.polygons[0].rings.length);
+            assert(p.polygons[0].rings[0].points.length);
+            this.bounds = AABB(p.polygons[0].rings[0].points[0]);
+            foreach (poly; p.polygons) {
+                foreach (ring; poly.rings) {
+                    insert(ring);
+                }
+            }
+        }
+        private void insert(const Ring r) {
+            assert(r.points.length);
+            if (!r.points.length) return;
+            this.points ~= r.points;
+            this.rings ~= cast(uint)r.points.length;
+            foreach (p; r.points) this.bounds.grow(p);
+        }
+        void draw (MapRenderer r, Color color, ViewTransform tr) {
+            uint start = 0;
+            foreach (ring; this.rings) {
+                uint n = ring, end = start + n;
+                assert(n > 0);
+                Vector2 p0 = tr.transform(this.points[start]);
+                Vector2 a = p0;
+                for (uint i = start + 1; i < end; ++i) {
+                    Vector2 b = tr.transform(this.points[i]);
+                    DrawLineV(a, b, color);
+                    a = b;
+                }
+                // DrawLineV(a, p0, color);
+                start = end;
+            }
+        }
+    }
+    struct GeoCache {
+        CachedGeometry[UUID] cache;
+        AABB[UUID] boundsCache;
+
+        ref CachedGeometry get (T)(ref const T item) {
+            auto ptr = item.id in cache;
+            if (!ptr) {
+                auto newCachedGeometry = CachedGeometry(item.geo);
+                boundsCache[item.id] = newCachedGeometry.bounds;
+                return cache[item.id] = newCachedGeometry;
+            }
+            return *ptr;
+        }
+        AABB getBounds (T)(ref const T item) {
+            auto ptr = item.id in boundsCache;
+            return ptr ? *ptr : get(item).bounds;
+        }
+        bool inBounds (T)(ref const T item, ViewTransform tr) {
+            return tr.viewBounds.contains(getBounds(item));
+        }
+    }
+    GeoCache geoCache;
 
     void render (const MapView view, ref const Building item, ViewTransform tr) {
-        draw(item.geo, Colors.GREEN, tr);
+        CachedGeometry* g = &(geoCache.get(item));
+        if (tr.viewBounds.contains(g.bounds)) {
+            draw(g.bounds, Colors.RED, tr);
+            g.draw(this, Colors.BLUE, tr);
+        }
+        // draw(item.geo, Colors.GREEN, tr);
     }
     void render (const MapView view, ref const BuildingPart item, ViewTransform tr) {
         draw(item.geo, Colors.BLUE, tr);
     }
     void render (const MapView view, ref const Place item, ViewTransform tr) {
-
+        draw(item.geo, Colors.RED, tr);
     }
     void render (const MapView view, ref const models.omf.Address item, ViewTransform tr) {
-
+        draw(item.geo, Colors.PURPLE, tr);
     }
 }
