@@ -35,6 +35,11 @@ class MapView {
 public:
     Throwable dataLoadErr = null;
 
+    AABB viewBounds = AABB(
+        Point(-122.081623,36.946668),
+        Point(-121.932878,37.003170)
+    );
+
     this (string exeDir) { this.exeDir = exeDir; this.r = new MapRenderer(); }
     void loadAsync(){
         enforce(!dataLoading);
@@ -60,6 +65,8 @@ public:
         }
     }
     void render () {
+        r.newFrame();
+        update();
         if (data) {
             r.render(this);
         } else {
@@ -67,12 +74,57 @@ public:
                 ClearBackground(Color(100,50,50,255));
                 r.text("Map load error:\n%s".format(dataLoadErr), 20, 20, Colors.WHITE);
             } else if (dataLoading) {
-                ClearBackground(Colors.RAYWHITE);
-                r.text("Loading...", 20, 20, Colors.BLACK);
+                r.text("Loading...");
             } else {
-                r.text("...map not loaded??", 20, 20);
+                r.text("...map not loaded??");
             }
         }
+    }
+
+    void textf(TArgs...)(TArgs args) { r.textf(args); }
+
+    void update () {
+        textf("view bounds: %s", viewBounds);
+
+        float dt = GetFrameTime();
+        float scroll = GetMouseWheelMove();
+        textf("scroll: %s", 100 * scroll * dt);
+
+        auto wsz = Vector2(GetScreenWidth(), GetScreenHeight());
+        auto mp = GetMousePosition();
+        auto mr = Vector2( mp.x / wsz.x, 1 - mp.y / wsz.y );
+        textf("mouse (pixel): %s", mp);
+        textf("mouse (rel):   %s", mr);
+
+        auto viewSz = Point(
+            viewBounds.maxv.x - viewBounds.minv.x,
+            viewBounds.maxv.y - viewBounds.minv.y
+        );
+        auto viewCenter = Point(
+            (viewBounds.maxv.x + viewBounds.minv.x) * 0.5,
+            (viewBounds.maxv.y + viewBounds.minv.y) * 0.5
+        );
+        textf("view size: %s", viewSz);
+        textf("view center: %s", viewCenter);
+
+        // if (scroll) {
+            // adjust view size: bigger or smaller
+            enum SCROLL_SENSITIVITY = 10.0;
+            double scrollInput = cast(double)scroll * dt * SCROLL_SENSITIVITY;
+            double resize = 1.0 - scrollInput;
+            viewSz.x *= resize;
+            viewSz.y *= resize;
+
+            textf("ScrollInput: %s => resize %s", scrollInput, resize);
+            textf("=> viewSz %s", viewSz);
+
+            // reapply / recalc bounds
+            viewBounds.minv.x = viewCenter.x - viewSz.x * 0.5;
+            viewBounds.minv.y = viewCenter.y - viewSz.y * 0.5;
+
+            viewBounds.maxv.x = viewCenter.x + viewSz.x * 0.5;
+            viewBounds.maxv.y = viewCenter.y + viewSz.y * 0.5;
+        // }
     }
 }
 
@@ -98,14 +150,24 @@ struct MapLoader {
 class MapRenderer {
     Font font;
     bool loaded = false;
+    int  textLayoutPosY = 0;
+    int  fontSize = 24;
+
 
     void load () {
         if (loaded) return; loaded = true;
         // load fonts
         writefln("loading font");
-        this.font = LoadFontEx("fonts/JetBrainsMono-Regular.ttf", 24, null, 0);
+        this.font = LoadFontEx("fonts/JetBrainsMono/JetBrainsMono-Regular.ttf", fontSize, null, 0);
         // this.font = LoadFont("fonts/JetBrainsMono-Regular.ttf");
         writefln(" => %s", this.font);
+    }
+    void textf(TArgs...)(string msg, TArgs args) {
+        text(msg.format(args));
+    }
+    void text (string msg) {
+        textLayoutPosY += fontSize;
+        text(msg, 20, 20 + textLayoutPosY);
     }
     void text (string msg, int x, int y) {
         text(msg, x, y, Colors.BLACK);
@@ -123,10 +185,12 @@ class MapRenderer {
     }
     private void drawText (const(char)* msg, int x, int y, Color color) {
         if (!loaded) load();
-        DrawTextEx(font, msg, Vector2(x, y), 24, 0, color);
+        DrawTextEx(font, msg, Vector2(x, y), fontSize, 0, color);
+    }
+    void newFrame () {
+        if (!loaded) load();
+        textLayoutPosY = 0;
     }
     void render (MapView view) {
-        if (!loaded) load();
-        text("map rendering TBD!", 20, 20);
     }
 }
