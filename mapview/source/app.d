@@ -35,10 +35,16 @@ class MapView {
 public:
     Throwable dataLoadErr = null;
 
-    AABB viewBounds = AABB(
+    // overall view bounds
+    AABB vb0 = AABB(
         Point(-122.081623,36.946668),
         Point(-121.932878,37.003170)
     );
+    double zoomLevel    = 0.2;
+    double minZoomLevel = -5; // exponents
+    double maxZoomLevel = +2;
+
+    AABB viewBounds; // current view bounds
 
     this (string exeDir) { this.exeDir = exeDir; this.r = new MapRenderer(); }
     void loadAsync(){
@@ -110,35 +116,26 @@ public:
         textf("view size: %s", viewSz);
         textf("view center: %s", viewCenter);
 
-        // if (scroll) {
+        if (scroll) {
             // adjust view size: bigger or smaller
-            enum SCROLL_SENSITIVITY = 10.0;
+            enum SCROLL_SENSITIVITY = 5.0;
             enum USE_DT = true;
-            static if (USE_DT) {
-                double scrollInput = cast(double)scroll * dt * SCROLL_SENSITIVITY;
-            } else {
-                double scrollInput = cast(double)scroll * SCROLL_SENSITIVITY / 10.0;
+            auto clampedDt = min(dt, 1/30);
+            double scrollInput = cast(double)scroll * dt * SCROLL_SENSITIVITY;
+            this.zoomLevel += scrollInput;
+
+            writefln("raw input %s => input %s => scale %s => zoom %s",
+                scroll, scrollInput, (1.0 - scrollInput) * 100, zoomLevel);
+
+            auto clamped = zoomLevel.clamp(minZoomLevel, maxZoomLevel);
+            if (clamped != zoomLevel) {
+                writefln("CLAMP: %s => %s", zoomLevel, clamped);
             }
-            double resize  = 1.0 - scrollInput;
-            double minSize = 0.000001;
-            textf("view size %s vs minsize %s", viewSz, minSize);
+            zoomLevel = clamped;
+        }
+        textf("zoom = %s (%s)", this.zoomLevel, std.math.log(zoomLevel));
+        this.viewBounds = this.vb0.scaledAroundCenter(pow(10, -this.zoomLevel));
 
-            // if (resize > 1 || min(viewSz.x, viewSz.y) * resize > minSize) {
-                viewSz.x *= resize;
-                viewSz.y *= resize;
-            // }
-            textf("ScrollInput: %s => resize %s", scrollInput, resize);
-            textf("=> viewSz %s", viewSz);
-
-            // reapply / recalc bounds
-            // viewBounds.minv.x = viewCenter.x - viewSz.x * 0.5;
-            // viewBounds.minv.y = viewCenter.y - viewSz.y * 0.5;
-
-            // viewBounds.maxv.x = viewCenter.x + viewSz.x * 0.5;
-            // viewBounds.maxv.y = viewCenter.y + viewSz.y * 0.5;
-            viewBounds = viewBounds.scaledAroundCenter(resize);
-        // }
-        //
         if (data) {
             auto tr = MapRenderer.ViewTransform(cast(MapView)this);
             textf("cursor pos: %s", tr.cursorPos);
@@ -388,6 +385,13 @@ class MapRenderer {
             }
             draw(g.bounds, Colors.RED, tr, boundsLineThickness);
             g.draw(this, Colors.BLUE, tr, polyLineThickness);
+
+            if (mouseover) {
+                textf("Building %s", item.id);
+                foreach (kv; item.props.byKeyValue) {
+                    textf("%s: %s", kv.key, kv.value);
+                }
+            }
         }
         // draw(item.geo, Colors.GREEN, tr);
     }
