@@ -292,6 +292,8 @@ class MapRenderer {
         Point mapToScreenScale;
         Point mapToScreenOffset;
         Point cursorPos; // mouse cursor position, transformed into geo Point space
+        float zoomLevel;
+        float precalcZoomCircleRadius;
 
         this (const MapView view) {
             this.viewBounds = view.viewBounds;
@@ -309,6 +311,8 @@ class MapRenderer {
             auto m = GetMousePosition();
             this.cursorPos = transformScreenToGeoSpace(m);
             // this.viewBounds = viewBounds.scaledAroundCenter(0.5); // for debugging view culling
+            this.zoomLevel = cast(float)view.zoomLevel;
+            this.precalcZoomCircleRadius = calcZoomCircleRadius(zoomLevel);
         }
         Point transformScreenToGeoSpace (Vector2 p) {
             return Point(
@@ -323,6 +327,13 @@ class MapRenderer {
             p.x *= mapToScreenScale.x;
             p.y *= mapToScreenScale.y;
             return Vector2(p.x, p.y);
+        }
+
+        float zoomBasedCirclePointRadius () { return precalcZoomCircleRadius; }
+        private float calcZoomCircleRadius(float zoomLevel) {
+            // zoom goes from 2 (zoomed in) to -4 (zoomed out)
+            auto z = (zoomLevel + 2) * 0.25;
+            return z * z * 4;
         }
     }
     void render (MapView view) {
@@ -375,10 +386,16 @@ class MapRenderer {
         DrawLineEx(b, Vector2(b.x, a.y), lineThickness, color);
     }
     void draw (Point p, Color color, ViewTransform tr) {
+        float circRadius = tr.zoomBasedCirclePointRadius;
+        if (circRadius <= 0) return;
+
         if (!tr.viewBounds.contains(p)) return;
-        DrawPoly(
-            tr.transform(p), 3, 10, 0, color
-        );
+        Vector2 pt = tr.transform(p);
+        DrawCircleV(pt, circRadius, color);
+        // DrawPixel(cast(int)pt.x, cast(int)pt.y, color);
+        // DrawPoly(
+        //     tr.transform(p), 3, 10, 0, color
+        // );
     }
     struct CachedGeometry {
         AABB    bounds;
@@ -495,9 +512,9 @@ class MapRenderer {
         draw(item.geo, Colors.BLUE, tr);
     }
     void render (const MapView view, ref const Place item, ViewTransform tr) {
-        // draw(item.geo, Colors.RED, tr);
+        draw(item.geo, Colors.RED, tr);
     }
     void render (const MapView view, ref const models.omf.Address item, ViewTransform tr) {
-        // draw(item.geo, Colors.PURPLE, tr);
+        draw(item.geo, Colors.PURPLE, tr);
     }
 }
