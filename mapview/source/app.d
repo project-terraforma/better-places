@@ -42,7 +42,7 @@ public:
     );
     double zoomLevel    = 0.2;
     double minZoomLevel = -5; // exponents
-    double maxZoomLevel = +2;
+    double maxZoomLevel = +3;
 
     AABB viewBounds; // current view bounds
     bool draggingView = false;
@@ -294,6 +294,8 @@ class MapRenderer {
         Point cursorPos; // mouse cursor position, transformed into geo Point space
         float zoomLevel;
         float precalcZoomCircleRadius;
+        Vector2 cursorPosScreenSpace;
+        float precalcZoomCircleRad2;
 
         this (const MapView view) {
             this.viewBounds = view.viewBounds;
@@ -313,6 +315,8 @@ class MapRenderer {
             // this.viewBounds = viewBounds.scaledAroundCenter(0.5); // for debugging view culling
             this.zoomLevel = cast(float)view.zoomLevel;
             this.precalcZoomCircleRadius = calcZoomCircleRadius(zoomLevel);
+            this.cursorPosScreenSpace = m;
+            this.precalcZoomCircleRad2 = precalcZoomCircleRadius * precalcZoomCircleRadius;
         }
         Point transformScreenToGeoSpace (Vector2 p) {
             return Point(
@@ -334,6 +338,13 @@ class MapRenderer {
             // zoom goes from 2 (zoomed in) to -4 (zoomed out)
             auto z = (zoomLevel + 2) * 0.25;
             return z * z * 4;
+        }
+        bool mouseNearPoint(Vector2 screenSpacePoint) {
+            float dx = screenSpacePoint.x - cursorPosScreenSpace.x;
+            float dy = screenSpacePoint.y - cursorPosScreenSpace.y;
+            dx *= dx; dy *= dy;
+            enum MOUSE_NEAR_PX_RADIUS = 35;
+            return dx + dy <= precalcZoomCircleRad2 + MOUSE_NEAR_PX_RADIUS*MOUSE_NEAR_PX_RADIUS;
         }
     }
     void render (MapView view) {
@@ -384,18 +395,6 @@ class MapRenderer {
 
         DrawLineEx(b, Vector2(a.x, b.y), lineThickness, color);
         DrawLineEx(b, Vector2(b.x, a.y), lineThickness, color);
-    }
-    void draw (Point p, Color color, ViewTransform tr) {
-        float circRadius = tr.zoomBasedCirclePointRadius;
-        if (circRadius <= 0) return;
-
-        if (!tr.viewBounds.contains(p)) return;
-        Vector2 pt = tr.transform(p);
-        DrawCircleV(pt, circRadius, color);
-        // DrawPixel(cast(int)pt.x, cast(int)pt.y, color);
-        // DrawPoly(
-        //     tr.transform(p), 3, 10, 0, color
-        // );
     }
     struct CachedGeometry {
         AABB    bounds;
@@ -500,6 +499,7 @@ class MapRenderer {
             g.draw(this, COLORS_BY_SRC[src], tr, polyLineThickness);
 
             if (mouseover) {
+                textLayoutPosY += fontSize;
                 textf("Building %s", item.id);
                 foreach (kv; item.props.byKeyValue) {
                     textf("%s: %s", kv.key, kv.value);
@@ -511,10 +511,51 @@ class MapRenderer {
     void render (const MapView view, ref const BuildingPart item, ViewTransform tr) {
         draw(item.geo, Colors.BLUE, tr);
     }
+
+
+    void draw (Point p, Color color, float radius, ViewTransform tr) {
+
+        // if (!tr.viewBounds.contains(p)) return; // hosted this up into callees
+        Vector2 pt = tr.transform(p);
+        DrawCircleV(pt, radius, color);
+        // DrawPixel(cast(int)pt.x, cast(int)pt.y, color);
+        // DrawPoly(
+        //     tr.transform(p), 3, 10, 0, color
+        // );
+    }
+
+    void drawPoint (TPointItem)(const MapView view, ref const TPointItem item, ViewTransform tr, Color color) {
+        float circRadius = tr.zoomBasedCirclePointRadius;
+        if (circRadius <= 0) return;
+        auto pos = item.pos;
+        if (!tr.viewBounds.contains(pos)) return;
+
+        Vector2 pt = tr.transform(pos); // screenspace
+        if (tr.mouseNearPoint(pt)) {
+            circRadius *= 2;
+            describeMouseover(view, item);
+        }
+        DrawCircleV(pt, circRadius, color);
+    }
+    void describeMouseover(const MapView view, ref const Place item) {
+        textLayoutPosY += fontSize;
+        textf("Place %s at %s", item.id, item.pos);
+        foreach (kv; item.props.byKeyValue) {
+            textf("%s = %s", kv.key, kv.value);
+        }
+
+    }
+    void describeMouseover(const MapView view, ref const models.omf.Address item) {
+        textLayoutPosY += fontSize;
+        textf("Address %s at %s", item.id, item.pos);
+        foreach (kv; item.props.byKeyValue) {
+            textf("%s = %s", kv.key, kv.value);
+        }
+    }
     void render (const MapView view, ref const Place item, ViewTransform tr) {
-        draw(item.geo, Colors.RED, tr);
+        drawPoint(view, item, tr, Colors.RED);
     }
     void render (const MapView view, ref const models.omf.Address item, ViewTransform tr) {
-        draw(item.geo, Colors.PURPLE, tr);
+        drawPoint(view, item, tr, Colors.GREEN);
     }
 }
