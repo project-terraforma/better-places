@@ -111,7 +111,8 @@ struct Building {
 struct BuildingPart {
     alias This = BuildingPart;
     // alias Geometry = Algebraic!(Polygon, MultiPolygon);
-    alias Geometry = Polygon;
+    // alias Geometry = Polygon;
+    alias Geometry = MultiPolygon;
 
     OmfFeatureBase base; alias base this;
     Geometry geo;
@@ -121,8 +122,8 @@ struct BuildingPart {
     this (models.geojson.Feature f) {
         this.base = OmfFeatureBase(f);
         f.geo.tryVisit!(
-            (Polygon p)      { this.geo = p; },
-            // (MultiPolygon p) { this.geo = Geometry(p); },
+            (Polygon p)      { this.geo = Geometry([ p ]); },
+            (MultiPolygon p) { this.geo = p; },
             () { enforce(false, "invalid BuildingPart geometry! %s".format(f.geo)); }
         );
     }
