@@ -1,14 +1,15 @@
 #!/usr/bin/env rdmd
 import std;
 
-enum Target { santa_cruz, sc=santa_cruz }
-enum Theme { place, building, building_part, address }
+enum Target { santa_cruz, sc=santa_cruz, sf }
+enum Theme { place, building, building_part, address, division, segment, connector }
 enum DataFormat { geojson, geoparquet }
 enum Action { fetch, refetch, clean }
 
 string BOUNDING_BOX (Target target) {
     final switch (target) {
         case Target.santa_cruz: return "-122.081623,36.946668,-121.932878,37.003170";
+        case Target.sf: return "-122.523994,37.681375,-122.351303,37.813852";
     }
     assert(0);
 }
