@@ -1,0 +1,112 @@
+summary: OMF dataset data/omf/seattle
+bounds: -122.805176,47.167310,-121.972961,47.931066
+
+building: 1341439
+	sources:
+		missing sources: 0
+		Microsoft ML Buildings: 762366/1341439 (56.83%)
+			confidence: (coverage 35.80% (272929/762366))
+				mean 0.979489, min 0.4031, max 1
+				samples: [0.9741, 0.9968, 0.9954, 0.9934, 0.9888, 0.9839, 0.9468, 0.9885, 0.976, 0.9838, 0.9745, 0.9878, 1, 0.9779, 0.9875, 0.9963, 0.9872, 0.9835, 0.9977, 0.9997]
+			overlaps:
+				total: 556020/762366 (72.93%)
+				USGS Lidar: 2029/762366 (0.27%)
+				OpenStreetMap: 552411/762366 (72.46%)
+				Esri Community Maps: 1580/762366 (0.21%)
+		USGS Lidar: 326340/1341439 (24.33%)
+			confidence: N/A
+			overlaps:
+				total: 326340/326340 (100.00%)
+				Microsoft ML Buildings: 2029/326340 (0.62%)
+				OpenStreetMap: 321280/326340 (98.45%)
+				Esri Community Maps: 3031/326340 (0.93%)
+		OpenStreetMap: 1027235/1341439 (76.58%)
+			confidence: N/A
+			overlaps:
+				total: 881315/1027235 (85.79%)
+				Microsoft ML Buildings: 552411/1027235 (53.78%)
+				USGS Lidar: 321280/1027235 (31.28%)
+				Esri Community Maps: 7624/1027235 (0.74%)
+		Esri Community Maps: 113453/1341439 (8.46%)
+			confidence: N/A
+			overlaps:
+				total: 12235/113453 (10.78%)
+				Microsoft ML Buildings: 1580/113453 (1.39%)
+				USGS Lidar: 3031/113453 (2.67%)
+				OpenStreetMap: 7624/113453 (6.72%)
+
+building_part: 3248
+	sources:
+		missing sources: 0
+		OpenStreetMap: 3248/3248 (100.00%)
+			confidence: N/A
+
+place: 159072
+	sources:
+		missing sources: 0
+		meta: 100219/159072 (63.00%)
+			confidence: (coverage 100.00% (100219/100219))
+				mean 0.816236, min 0.323479, max 0.979783
+				samples: [0.950063, 0.950063, 0.950063, 0.950063, 0.950063, 0.950063, 0.950063, 0.950063, 0.323479, 0.950063, 0.950063, 0.979783, 0.950063, 0.950063, 0.950063, 0.323479, 0.950063, 0.323479, 0.950063, 0.950063]
+			overlaps:
+				total: 100219/100219 (100.00%)
+				Overture: 100219/100219 (100.00%)
+		Foursquare: 25052/159072 (15.75%)
+			confidence: (coverage 100.00% (25052/25052))
+				mean 0.77, min 0.77, max 0.77
+				samples: [0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77]
+			overlaps:
+				total: 25052/25052 (100.00%)
+				Overture: 25052/25052 (100.00%)
+		Microsoft: 29111/159072 (18.30%)
+			confidence: (coverage 100.00% (29111/29111))
+				mean 0.77, min 0.77, max 0.77
+				samples: [0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77, 0.77]
+			overlaps:
+				total: 29111/29111 (100.00%)
+				Overture: 29111/29111 (100.00%)
+		DAC: 791/159072 (0.50%)
+			confidence: (coverage 100.00% (791/791))
+				mean 1, min 1, max 1
+				samples: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+			overlaps:
+				total: 791/791 (100.00%)
+				Overture: 791/791 (100.00%)
+		Overture: 159072/159072 (100.00%)
+			confidence: N/A
+			overlaps:
+				total: 159072/159072 (100.00%)
+				meta: 100219/159072 (63.00%)
+				Foursquare: 25052/159072 (15.75%)
+				Microsoft: 29111/159072 (18.30%)
+				RenderSEO: 15/159072 (0.01%)
+				DAC: 791/159072 (0.50%)
+				PinMeTo: 9/159072 (0.01%)
+				AllThePlaces: 3875/159072 (2.44%)
+		RenderSEO: 15/159072 (0.01%)
+			confidence: (coverage 100.00% (15/15))
+				mean 0.9, min 0.9, max 0.9
+				samples: [0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9]
+			overlaps:
+				total: 15/15 (100.00%)
+				Overture: 15/15 (100.00%)
+		PinMeTo: 9/159072 (0.01%)
+			confidence: (coverage 100.00% (9/9))
+				mean 0.5, min 0.5, max 0.5
+				samples: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
+			overlaps:
+				total: 9/9 (100.00%)
+				Overture: 9/9 (100.00%)
+		AllThePlaces: 3875/159072 (2.44%)
+			confidence: (coverage 100.00% (3875/3875))
+				mean 0.4, min 0.4, max 0.4
+				samples: [0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4]
+			overlaps:
+				total: 3875/3875 (100.00%)
+				Overture: 3875/3875 (100.00%)
+
+address: 1152800
+	sources:
+		missing sources: 0
+		NAD: 1152800/1152800 (100.00%)
+			confidence: N/A
