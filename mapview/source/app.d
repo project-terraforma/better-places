@@ -56,7 +56,12 @@ public:
 
     this (string exeDir) {
         this.exeDir = exeDir; this.r = new MapRenderer();
+        resetViewBounds();
     }
+    void resetViewBounds() {
+        this.viewBounds = vb0.scaledAroundCenter(0.4);
+    }
+
     void loadAsync(){
         enforce(!dataLoading);
         dataLoading = true;
@@ -99,36 +104,63 @@ public:
 
     void textf(TArgs...)(TArgs args) { r.textf(args); }
 
-    private void recalcViewBounds () {
-        // this.viewBounds = this.vb0.scaledAroundCenter(pow(10, -this.zoomLevel));
-        auto bounds  = this.vb0;
-        Point center = bounds.center;
-        Point size   = bounds.size;
+    private void updateView (bool dragView, double relZoom) {
 
-        center.x += viewPos.x;
-        center.y += viewPos.y;
+        if (IsKeyPressed(KeyboardKey.KEY_R)) {
+            resetViewBounds();
+        }
 
-        auto scale = pow(10, -this.zoomLevel);
-        size.x *= scale;
-        size.y *= scale;
+        auto bounds = viewBounds;
+        auto viewSpanWorld = bounds.size;
 
-        this.viewBounds = AABB(
-            Point(
-                center.x - size.x * 0.5,
-                center.y - size.y * 0.5,
-            ),
-            Point(
-                center.x + size.x * 0.5,
-                center.y + size.y * 0.5
-            )
-        );
+        auto w = GetScreenWidth(), h = GetScreenHeight();
+        auto mousePosScreen = GetMousePosition();
+        auto mousePosNorm   = Vector2(mousePosScreen.x / w, 1 - mousePosScreen.y / h);
 
-        // this.viewBounds.minv.x += viewPos.x;
-        // this.viewBounds.minv.y += viewPos.y;
-        // this.viewBounds.maxv.x += viewPos.x;
-        // this.viewBounds.maxv.x += viewPos.y;
+        double dt = GetFrameTime();
 
-        // this.viewBounds = this.viewBounds.scaledAroundCenter(pow(10, -this.zoomLevel));
+        auto prevZoom = this.zoomLevel;
+        auto nextZoom = (this.zoomLevel - relZoom).clamp(minZoomLevel, maxZoomLevel);
+        relZoom = nextZoom - prevZoom;
+        this.zoomLevel = nextZoom;
+
+        textf("bounds %s", bounds);
+        textf("mousePosNorm %s", mousePosNorm);
+        textf("zoom: %s => %s = %s", prevZoom, nextZoom, relZoom);
+
+        auto relZoomScale = pow(4, relZoom);
+        textf("=> rel zoom %s", relZoomScale);
+
+        if (relZoom) {
+            bounds.minv.x += mousePosNorm.x * viewSpanWorld.x * (1 - relZoomScale);
+            bounds.minv.y += (1-mousePosNorm.y) * viewSpanWorld.y * (1 - relZoomScale);
+
+            bounds.maxv.x = bounds.minv.x + viewSpanWorld.x * relZoomScale;
+            bounds.maxv.y = bounds.minv.y + viewSpanWorld.y * relZoomScale;
+        }
+        if (dragView) {
+            auto mouseScreenDelta = GetMouseDelta();
+            auto mouseNormDelta = Point( mouseScreenDelta.x / w, mouseScreenDelta.y / h );
+            auto mouseDeltaWorld = Point(
+                -mouseNormDelta.x * viewSpanWorld.x,
+                -mouseNormDelta.y * viewSpanWorld.y
+            );
+            textf("mouse delta: %s => %s", mouseNormDelta, mouseDeltaWorld);
+            bounds.minv.x += mouseDeltaWorld.x;
+            bounds.minv.y += mouseDeltaWorld.y;
+            bounds.maxv.x += mouseDeltaWorld.x;
+            bounds.maxv.y += mouseDeltaWorld.y;
+            this.viewVel = Point( mouseDeltaWorld.x / dt, mouseDeltaWorld.y / dt );
+        } else {
+            viewVel.x *= (1 - 0.5 * dt);
+            viewVel.y *= (1 - 0.5 * dt);
+
+            bounds.minv.x += viewVel.x * dt;
+            bounds.minv.y += viewVel.y * dt;
+            bounds.maxv.x += viewVel.x * dt;
+            bounds.maxv.y += viewVel.y * dt;
+        }
+        this.viewBounds = bounds;
     }
     void update () {
         textf("view bounds: %s", viewBounds);
@@ -146,37 +178,6 @@ public:
         } else if (draggingView && !IsMouseButtonDown(0)) {
             draggingView = false;
         }
-        if (draggingView && !startDrag) {
-            // actually just work off of mouse delta?
-            Vector2 mouseDelta = GetMouseDelta();
-            auto transform = MapRenderer.ViewTransform(this);
-            // Point worldDelta = transform.transformScreenToGeoSpace(mouseDelta);
-            Point worldDelta = Point(
-                mouseDelta.x / transform.mapToScreenScale.x,
-                mouseDelta.y / transform.mapToScreenScale.y
-            );
-            auto limits = this.viewPosLimits;
-            viewPos.x = (viewPos.x + worldDelta.x)
-                ;//.clamp(limits.minv.x, limits.maxv.x);
-            viewPos.y = (viewPos.y + worldDelta.y);//.clamp(limits.minv.y, limits.maxv.y);
-            recalcViewBounds();
-
-            textf("view limits: %s", limits);
-            textf("mouse delta: %s", mouseDelta);
-            textf("world delta: %s", worldDelta);
-            textf("view pos:    %s", viewPos);
-
-            viewVel = worldDelta;
-        } else {
-            textf("view pos: %s", viewPos);
-
-            auto falloff = (1.0 - dt.clamp(0, 1) * 0.5);
-            viewVel.x *= falloff;
-            viewVel.y *= falloff;
-
-            viewPos.x += viewVel.x;
-            viewPos.y += viewVel.y;
-        }
         float scroll = GetMouseWheelMove();
         textf("scroll: %s", 100 * scroll * dt);
 
@@ -186,41 +187,21 @@ public:
         textf("mouse (pixel): %s", mp);
         textf("mouse (rel):   %s", mr);
 
-        auto viewSz = Point(
-            viewBounds.maxv.x - viewBounds.minv.x,
-            viewBounds.maxv.y - viewBounds.minv.y
-        );
-        auto viewCenter = Point(
-            (viewBounds.maxv.x + viewBounds.minv.x) * 0.5,
-            (viewBounds.maxv.y + viewBounds.minv.y) * 0.5
-        );
-        textf("view size: %s", viewSz);
-        textf("view center: %s", viewCenter);
-
+        double zoomRel = 0;
         if (scroll) {
             // adjust view size: bigger or smaller
             enum SCROLL_SENSITIVITY = 5.0;
             enum USE_DT = true;
             auto clampedDt = min(dt, 1/30);
             double scrollInput = cast(double)scroll * dt * SCROLL_SENSITIVITY;
-            this.zoomLevel += scrollInput;
+            // this.zoomLevel += scrollInput;
+            zoomRel = scrollInput;
 
             writefln("raw input %s => input %s => scale %s => zoom %s",
                 scroll, scrollInput, (1.0 - scrollInput) * 100, zoomLevel);
 
-            auto clamped = zoomLevel.clamp(minZoomLevel, maxZoomLevel);
-            if (clamped != zoomLevel) {
-                writefln("CLAMP: %s => %s", zoomLevel, clamped);
-            }
-            zoomLevel = clamped;
         }
-        textf("zoom = %s (%s)", this.zoomLevel, std.math.log(zoomLevel));
-        recalcViewBounds();
-
-        if (data) {
-            auto tr = MapRenderer.ViewTransform(cast(MapView)this);
-            textf("cursor pos: %s", tr.cursorPos);
-        }
+        updateView(draggingView && !startDrag, zoomRel);
     }
 }
 
