@@ -93,3 +93,16 @@ data/tools/summarize_omf.d
 1) Add the the new theme name to the `Theme` enum
 2) re-fetch data with `data/tools/fetch_omf_data.d -p all`
 3) or `data/tools/fetch_omf_data.d -p your_theme_name`
+
+# Experimental map viewer
+
+See `mapview`
+
+Demo w/ a single copy + paste: (docker TBD)
+```bash
+data/tools/fetch_omf_data.d -p all
+cd mapview
+dub upgrade
+dub run raylib-d:install
+dub run
+```
