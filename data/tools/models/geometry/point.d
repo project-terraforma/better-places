@@ -23,7 +23,7 @@ struct TPoint (Unit=PolarDeg) {
             return TPoint!U( U.from!Unit(x), U.from!Unit(y) );
         } else static if (__traits(compiles, Unit.to!U(x))) {
             return TPoint!U( Unit.to!U(x), Unit.to!U(y) );
-        } else static assert("unknown conversion from "~Unit.stringof~" to "~U.stringof);
+        } else static assert(false, "unknown conversion from "~Unit.stringof~" to "~U.stringof);
     }
 
     void toString (scope void delegate(scope const(char)[]) sink) {

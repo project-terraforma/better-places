@@ -6,10 +6,18 @@ static struct PolarDeg {
     alias This = PolarDeg;
     alias T = double;
     static auto to (Unit)(T value) {
-        static if (is(Unit == PolarDeg)) { return value; }
-        else static if (is(Unit == PolarNorm)) { return cast(Unit.T)( value * (1.0 / 180.0) ); }
-        else static if (is(Unit == PolarRad))  { return cast(Unit.T)( value * (PI / 180.0) ); }
-        else static assert("unsupported type");
+        static if (is(Unit == This)) { return value; }
+        else static if (is(Unit == PolarNorm)) {
+            return cast(Unit.T)(
+                (value * (1.0 / 180.0) + 0.5)
+            );
+        }
+        else static if (is(Unit == PolarRad)) {
+            return cast(Unit.T)(
+                value * (PI / 180.0)
+            );
+        }
+        else static assert(false, "unsupported conversion from "~This.stringof~" to "~Unit.stringof);
     }
     static auto to (Unit, TSpace)(T value, TSpace space) { return space.fromTo!(This,Unit)(value); }
 }
@@ -17,10 +25,38 @@ static struct PolarRad {
     alias T = double;
 }
 static struct PolarNorm {
+    alias This = PolarNorm;
     alias T = double;
+
+    static auto to (Unit)(T value) {
+        static if (is(Unit == This)) { return value; }
+        else static if (is(Unit == PolarDeg)) {
+            return cast(Unit.T)(
+                (value - 0.5) * 180.0
+            );
+        }
+        else static if (is(Unit == PolarRad)) {
+            return cast(Unit.T)(
+                (value - 0.5) * PI
+            );
+        }
+
+        // approximate / wrong
+        else static if (is(Unit == Meters)) {
+            enum R = 6_378_137.0; // webmercator
+            import std.math: PI;
+            enum CIRC = R * 2 * PI; // extremely approximate for equator; otherwise wrong
+            return cast(Unit.T)( value * CIRC );
+        }
+
+
+        else static assert(false, "unsupported conversion from "~This.stringof~" to "~Unit.stringof);
+    }
 }
 static struct Pixels { alias T = float; }
-static struct Meters { alias T = double; }
+static struct Meters {
+    alias T = double;
+}
 
 static struct ScreenSpace { uint w, h; }
 static struct RawCoordSpace {}

@@ -11,6 +11,7 @@ struct TAABB(U=DefaultUnit) {
     alias MultiPolygon = TMultiPolygon!U;
     alias AABB = TAABB!U;
     alias This = AABB;
+    alias Unit = U;
 
     Point minv, maxv;
     this (Point p1, Point p2)
@@ -116,5 +117,30 @@ struct TAABB(U=DefaultUnit) {
     }
     This scaledAroundCenter(double scale) const {
         return scaledAroundCenter(scale, scale);
+    }
+    This boundsShapeIntersect (This other) const {
+        return This(
+            Point(
+                max(minv.x, other.minv.x),
+                max(minv.y, other.minv.y)
+            ),
+            Point(
+                min(maxv.x, other.maxv.x),
+                min(maxv.y, other.maxv.y)
+            )
+        );
+    }
+    This clip (This other) const { return this.boundsShapeIntersect(other); }
+
+    auto to (U2)() {
+        static if (is(U == U2) || is(U2 == This)) { return this; }
+        else static if (__traits(compiles, TAABB!(U2.Unit))) {
+            return TAABB!(U2.Unit)(
+                this.minv.to!(U2.Unit),
+                this.maxv.to!(U2.Unit)
+            );
+        } else {
+            return TAABB!U2(this.minv.to!U2, this.maxv.to!U2);
+        }
     }
 }

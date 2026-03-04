@@ -2,11 +2,23 @@ import raylib;
 import models.omf;
 import models.geojson;
 import models.geometry;
+import models.flexgrid;
+import models.flexgrid_plugins.omf_loader;
+import models.flexgrid_plugins.flexgrid_viewer;
 import std;
+
+alias Geometry = models.geojson.Geometry;
+alias Point = Geometry.Point;
+alias Ring = Geometry.Ring;
+alias AABB = Geometry.AABB;
+alias Polygon = Geometry.Polygon;
+alias MultiPolygon = Geometry.MultiPolygon;
 
 void main(string[] args) {
     auto exeDir = args[0].dirName;
-    scope mapview = new MapView(exeDir);
+    scope grid = new FlexGrid();
+    scope viewer = new Viewer(grid);
+    scope mapview = new MapView(exeDir, grid, viewer);
     mapview.loadAsync();
 
     // call this before using raylib
@@ -29,6 +41,8 @@ void loadMap (shared MapView v) { v.doLoadAsync(); }
 class MapView {
     string exeDir;
     MapRenderer r;
+    FlexGrid    grid;
+    Viewer      gridViewer;
     shared OmfDataset data;
     shared bool dataLoaded = false;
     shared bool dataLoading = false;
@@ -50,13 +64,16 @@ public:
     Point viewPos = Point(0, 0);
     Point viewVel = Point(0, 0);
 
-    @property AABB viewPosLimits () const {
-        return vb0.scaledAroundCenter(10.0);
+    this (string exeDir, FlexGrid grid, Viewer gridViewer) {
+        this.exeDir = exeDir;
+        this.grid = grid;
+        this.gridViewer = gridViewer;
+        this.r = new MapRenderer();
+        resetViewBounds();
     }
 
-    this (string exeDir) {
-        this.exeDir = exeDir; this.r = new MapRenderer();
-        resetViewBounds();
+    @property AABB viewPosLimits () const {
+        return vb0.scaledAroundCenter(10.0);
     }
     void resetViewBounds() {
         this.viewBounds = vb0.scaledAroundCenter(0.4);
@@ -90,6 +107,8 @@ public:
         update();
         if (data) {
             r.render(this);
+            gridViewer.view = viewBounds;
+            gridViewer.render();
         } else {
             if (dataLoadErr) {
                 ClearBackground(Color(100,50,50,255));
@@ -161,6 +180,8 @@ public:
             bounds.maxv.y += viewVel.y * dt;
         }
         this.viewBounds = bounds;
+        assert(gridViewer !is null);
+        this.gridViewer.view = bounds;
     }
     void update () {
         textf("view bounds: %s", viewBounds);
@@ -221,6 +242,7 @@ struct MapLoader {
             enforce(path.exists, "missing file '%s'".format(path));
         }
         auto data = new OmfDataset().loadGeoJson(dataPath);
+        (cast(MapView)view).grid.load(data);
         outData = cast(shared OmfDataset)data;
     }
 }
@@ -229,7 +251,6 @@ class MapRenderer {
     bool loaded = false;
     int  textLayoutPosY = 0;
     int  fontSize = 24;
-
 
     void load () {
         if (loaded) return; loaded = true;
