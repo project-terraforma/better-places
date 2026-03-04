@@ -1,6 +1,15 @@
 module models.flexgrid;
 import models.geometry;
 import std;
+alias u32 = uint;
+alias u64 = ulong;
+
+alias Geometry = TGeometry!PolarNorm;
+alias Point = Geometry.Point;
+alias AABB = Geometry.AABB;
+alias Ring = Geometry.Ring;
+alias Polygon = Geometry.Polygon;
+alias MultiPolygon = Geometry.MultiPolygon;
 
 enum MAX_LEVEL = 14;
 
@@ -10,6 +19,7 @@ struct FlexCellKey {
         ulong value;
         Fields fields;
     }
+    alias fields this;
     struct Fields {
         mixin(bitfields!(
             uint, "x", 30,
@@ -21,10 +31,14 @@ struct FlexCellKey {
         in { assert(level <= MAX_LEVEL); }
         do {
             uint LEVEL_MASK = (1U << cast(uint)(level+level)) -1U;
-            this.x = x &= LEVEL_MASK;
-            this.y = y &= LEVEL_MASK;
+            this.x = x & LEVEL_MASK;
+            this.y = y & LEVEL_MASK;
             this.level = level;
         }
+
+    ulong opHash () {
+        return value;
+    }
 
     static ubyte getLevel (AABB bounds) {
         auto maxSpan = max(
@@ -43,7 +57,7 @@ struct FlexCellKey {
         // while (level && maxSpan > div) {
         //     ++level; div *= 4;
         // }
-        return level;
+        return cast(ubyte)level;
     }
     static FlexCellKey from (Point point, ubyte level) {
         // normalize point from polar degrees to polar norm [0,1]
@@ -72,14 +86,15 @@ struct FlexCellKey {
         auto l = cast(ulong)(level);
         return cast(double)(1LU << (l+l));
     }
-    @property AABB boundsPolarNorm () const {
-        auto minv = minCoordPolarNorm();
-        auto sz = sizePolarNorm();
-        return AABB(minv, Point(minv.x + sz, minv.y + sz));
-    }
+    // @property AABB boundsPolarNorm () const {
+    //     auto minv = minCoordPolarNorm();
+    //     auto sz = sizePolarNorm();
+    //     return AABB(minv, Point(minv.x + sz, minv.y + sz));
+    // }
 
     @property Point minCoordPolarDeg () const { return (minCoordPolarNorm() - 0.5) * 360.0; }
     @property AABB  boundsPolarNorm  () const { return (boundsPolarNorm() - 0.5) * 360.0; }
+    @property AABB boundsPolarDeg () const { return boundsPolarNorm(); }
 }
 
 class FlexCell {
@@ -92,14 +107,14 @@ class FlexCell {
 public:
     @property AABB boundsPolarNorm () const { return cellKey.boundsPolarNorm; }
     @property AABB boundsPolarDeg () const { return cellKey.boundsPolarDeg; }
-    this (FlexCellKey key) { this.key = cellKey; }
+    this (FlexCellKey key) { this.cellKey = key; }
 }
 interface IFlexCellFactory {
     FlexCell create (FlexGrid grid, FlexCellKey key);
 }
 class FlexGrid {
-    FlexCell!ulong  cells;
-    FlexIndex!ulong cellIndexes;
+    FlexCell[FlexCellKey]  cells;
+    FlexIndex[FlexCellKey] cellIndexes;
     IFlexCellFactory cellFactory;
 public:
     this (IFlexCellFactory factory) { this.cellFactory = factory; }
@@ -164,4 +179,8 @@ class FlexView : FlexObject {
     string              name;
     string              description;
     FlexObject[UUID]    items;
+}
+struct FlexIndex {}
+void updateCellCreated(ref FlexIndex[FlexCellKey] index, FlexCellKey key) {
+
 }

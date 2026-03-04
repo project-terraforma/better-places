@@ -100,7 +100,7 @@ struct Building {
 
     this (models.geojson.Feature f) {
         this.base = OmfFeatureBase(f);
-        f.geo.tryVisit!(
+        f.geo.value.tryVisit!(
             (Polygon p)      { this.geo = MultiPolygon([ p ]); },
             (MultiPolygon p) { this.geo = p; },
             () { enforce(false, "invalid Building geometry! %s".format(f.geo)); }
@@ -120,7 +120,7 @@ struct BuildingPart {
 
     this (models.geojson.Feature f) {
         this.base = OmfFeatureBase(f);
-        f.geo.tryVisit!(
+        f.geo.value.tryVisit!(
             (Polygon p)      { this.geo = Geometry([ p ]); },
             (MultiPolygon p) { this.geo = p; },
             () { enforce(false, "invalid BuildingPart geometry! %s".format(f.geo)); }
@@ -138,7 +138,7 @@ struct Place {
 
     this (models.geojson.Feature f) {
         this.base = OmfFeatureBase(f);
-        f.geo.tryVisit!(
+        f.geo.value.tryVisit!(
             (Point p) { this.pos = p; },
             () { enforce(false, "invalid Place geometry! %s".format(f.geo)); }
         );
@@ -155,7 +155,7 @@ struct Address {
 
     this (models.geojson.Feature f) {
         this.base = OmfFeatureBase(f);
-        f.geo.tryVisit!(
+        f.geo.value.tryVisit!(
             (Point p) { this.pos = p; },
             () { enforce(false, "invalid Address geometry! %s".format(f.geo)); }
         );

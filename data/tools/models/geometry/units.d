@@ -1,19 +1,7 @@
-struct Point (Unit) {
-    alias T = Unit.T;
-    T x, y;
-    
-    Point!U (U) to () {
-        static if (__traits(compiles, U.from!Unit(x))) {
-            return Point!U( U.from!Unit(x), U.from!Unit(y) );
-        } else static if (__traits(compiles, Unit.to!U(x))) {
-            return Point!U( Unit.to!U(x), Unit.to!U(y) );
-        } else static assert("unknown conversion from "~Unit.stringof~" to "~U.stringof);
-    }
-}
-struct AABB (Unit) {
-    alias T = Unit.T;
-    Point!T minv, maxv;
-}
+module models.geometry.units;
+
+alias DefaultUnit = PolarDeg;
+
 static struct PolarDeg {
     alias This = PolarDeg;
     alias T = double;
@@ -29,29 +17,28 @@ static struct PolarRad {
     alias T = double;
 }
 static struct PolarNorm {
-    alias T = float;
+    alias T = double;
 }
 static struct Pixels { alias T = float; }
 static struct Meters { alias T = double; }
 
 static struct ScreenSpace { uint w, h; }
 static struct RawCoordSpace {}
-static struct BasicPolarProjectionSpace {
-    Point!PolarRad projectAt, projectScale;
-    
-    this (Point!PolarRad at)    { assign(at); }
-    this (Unit)(Point!Unit at)  { assign(at); }
-    void assign (Unit)(Point!Unit at) { assign(at.to!PolarRad); }
-    void assign (Point!PolarRad at) {
-        this.projectAt = at;
-        // this.projectScale = // TODO
-    }
-    static auto fromTo (TFrom, TTo, T)(T value) {
-        static if (is(TFrom == TTo)) return value;
-        static if (is(TTo == Meters)) {
-            
-        }
-    }
-    
-}
+// static struct BasicPolarProjectionSpace {
+//     Point!PolarRad projectAt, projectScale;
+
+//     this (Point!PolarRad at)    { assign(at); }
+//     this (Unit)(Point!Unit at)  { assign(at); }
+//     void assign (Unit)(Point!Unit at) { assign(at.to!PolarRad); }
+//     void assign (Point!PolarRad at) {
+//         this.projectAt = at;
+//         // this.projectScale = // TODO
+//     }
+//     static auto fromTo (TFrom, TTo, T)(T value) {
+//         static if (is(TFrom == TTo)) return value;
+//         static if (is(TTo == Meters)) {
+
+//         }
+//     }
+// }
 static struct WebMercatorSpace {}

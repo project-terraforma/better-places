@@ -6,6 +6,13 @@ import std.algorithm;
 import std.array;
 import std;
 
+alias Geometry = TGeometry!PolarDeg;
+alias Point = Geometry.Point;
+alias AABB = Geometry.AABB;
+alias Ring = Geometry.Ring;
+alias Polygon = Geometry.Polygon;
+alias MultiPolygon = Geometry.MultiPolygon;
+
 struct FeatureCollection {
     Feature[] features;
 }
