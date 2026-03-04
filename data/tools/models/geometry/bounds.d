@@ -144,3 +144,8 @@ struct TAABB(U=DefaultUnit) {
         }
     }
 }
+
+TAABB!U bounds (U)(TRing!U r) { return TAABB!U(r); }
+TAABB!U bounds (U)(TPolygon!U r) { return TAABB!U(r); }
+TAABB!U bounds (U)(TMultiPolygon!U r) { return TAABB!U(r); }
+TAABB!U bounds (U)(TGeometry!U r) { return TAABB!U(r); }

@@ -9,10 +9,15 @@ class FlexCell {
     FlexObject[UUID]    objects;
     FlexView[UUID]      views;
     FlexView[string]    viewsByName;
-public:
-    this (FlexGrid intoGrid, FlexCellKey key) { this.cellKey = key; }
 
-    @property AABB bounds () const { return cellKey.bounds; }
+    JSONValue[UUID]             props;
+    TGeometry!PolarDeg[UUID]    geo;
+    TAABB!PolarNorm[UUID]       bbx;
+    AABB bounds;
+public:
+    this (FlexGrid intoGrid, FlexCellKey key) { this.cellKey = key; auto b = key.bounds; this.bounds = AABB(key.bounds.minv,key.bounds.minv); }
+
+    // @property AABB bounds () const { return cellKey.bounds; }
     @property auto level () const { return cellKey.level; }
 
     @property AABB boundsPolarNorm () const { return cellKey.boundsPolarNorm; }

@@ -77,10 +77,10 @@ struct FlexCellKey {
         if (point.x < 1) point.x += 0.5;
         if (point.y < 1) point.y += 0.5;
 
-        writefln("FLEXCELLKEY %s * %s => %s", fmult, point, point * fmult);
+        // writefln("FLEXCELLKEY %s * %s => %s", fmult, point, point * fmult);
         uint x = cast(uint)(point.x * fmult) & mask;
         uint y = cast(uint)(point.y * fmult) & mask;
-        writefln(" =>&(%s) => %s, %s", mask, x, y);
+        // writefln(" =>&(%s) => %s, %s", mask, x, y);
         return This(x, y, level);
     }
     static FlexCellKey from (TPoint!PolarNorm point) { return from(point, MAX_LEVEL); }

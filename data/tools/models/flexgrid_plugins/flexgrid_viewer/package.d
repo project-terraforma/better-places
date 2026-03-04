@@ -45,17 +45,41 @@ class Viewer {
     this (FlexGrid grid, AABB view) { m_grid = grid; m_view = view; }
     this (FlexGrid grid) { m_grid = grid; }
 
-    void render () {
+    void render (TR, TTR)(TR r, TTR tr) {
         // writefln("RENDERING VIEW, view bounds =\n\t%s\n\t%s\n\t%s",
         //     view.to!PolarNorm,
         //     view.to!PolarDeg,
         //     view.to!Meters
         // );
-        m_grid.visitCells(view, &renderCell);
+        // m_grid.visitCells(view, &renderCell);
+        auto v = this.view;
+        r.textf("view bounds %s", v);
+        foreach (kv; grid.cells.byKeyValue) {
+            auto cellBounds = kv.key.bounds;
+            bool inBounds = v.contains(cellBounds);
+            r.textf("checking cell bounds: %x => (%s,%s) => %s",
+                kv.key.value, cellBounds.minv, cellBounds.maxv,
+                inBounds);
+
+            r.draw(cellBounds.to!PolarDeg, Colors.BLUE, tr, 2);
+            if (!v.contains(cellBounds)) continue;
+
+            // if (!v.contains(kv.key.bounds)) continue;
+            auto cell = kv.value;
+            renderCell(cell, r, tr);
+        }
     }
-    private void renderCell (FlexCell cell) {
-        auto viewBounds = cell.bounds.clip(view);
+    private void renderCell (TR, TTR)(FlexCell cell, TR renderer, TTR transform) {
+        auto viewBounds = view;
+        // auto viewBounds = cell.bounds.clip(view);
         // writefln("rendering %s at %s: %s", cell, cell.level, viewBounds);
+        foreach (kv; cell.bbx.byKeyValue) {
+            auto bounds = kv.value;
+            if (!viewBounds.contains(bounds)) continue;
+            auto geo = kv.key in cell.geo;
+            if (geo) renderer.render(transform, *geo, Colors.GREEN);
+            // auto props = kv.key in cell.props;
+        }
     }
 }
 // interface ITextWriter { void write (const(char)[]); }

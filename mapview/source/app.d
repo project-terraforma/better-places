@@ -106,9 +106,9 @@ public:
         r.newFrame();
         update();
         if (data) {
-            r.render(this);
             gridViewer.view = viewBounds;
-            gridViewer.render();
+            r.render(this, gridViewer);
+            // gridViewer.render();
         } else {
             if (dataLoadErr) {
                 ClearBackground(Color(100,50,50,255));
@@ -349,21 +349,34 @@ class MapRenderer {
             return dx + dy <= precalcZoomCircleRad2 + MOUSE_NEAR_PX_RADIUS*MOUSE_NEAR_PX_RADIUS;
         }
     }
-    void render (MapView view) {
+    void render (MapView view, Viewer gridViewer) {
         auto data = view.data;
         if (!data) {
             textf("MISSING MAP OBJECT!");
         } else {
-            render(view, cast(const(OmfDataset))data);
+            render(view, cast(const(OmfDataset))data, gridViewer);
         }
     }
-    void render (MapView view, const(OmfDataset) data) {
+    void render (MapView view, const(OmfDataset) data, Viewer gridViewer) {
         assert(data !is null);
         auto tr = ViewTransform(view);
-        static foreach (part; data.PARTS) {
-            render(view, mixin("data."~part), tr);
-        }
+        gridViewer.render(this, tr); // temp hook into flexgrid_plugins/flexgrid_viewer to use
+                                    // polyfill with this renderer's rendering fns, transforms etc
+
+        // static foreach (part; data.PARTS) {
+        //     render(view, mixin("data."~part), tr);
+        // }
     }
+    void render (ViewTransform tr, Geometry g, Color c) {
+        g.value.tryVisit!(
+            (MultiPolygon p) => draw(p, c, tr),
+            (Polygon p) => draw(p, c, tr),
+            // (Point p) => draw(p, c, tr)
+            (_) {}
+        );
+    }
+
+
     void render (T)(const MapView view, ref const(OmfCollection!T) data, ViewTransform tr) {
         foreach (kv; data.items.byKeyValue) {
             render(view, kv.value, tr);
