@@ -2,7 +2,10 @@ module models.flexgrid.key;
 public import models.flexgrid.common;
 import std;
 
-enum MAX_LEVEL = 14;
+// enum MAX_LEVEL = 14;
+enum MAX_LEVEL = 8;
+// enum MAX_LEVEL = 10;
+// enum MAX_LEVEL = 7;
 
 struct FlexCellKey {
     alias This = FlexCellKey;
@@ -13,9 +16,13 @@ struct FlexCellKey {
     alias fields this;
     struct Fields {
         mixin(bitfields!(
-            uint, "x", 30,
-            uint, "y", 30,
+            // uint, "x", 30,
+            // uint, "y", 30,
+            // ubyte, "level", 4,
+            uint,  "x",     24,
+            uint,  "y",     24,
             ubyte, "level", 4,
+            uint,  "resv",  12,
         ));
     }
     private this (uint x, uint y, ubyte level)
@@ -26,6 +33,19 @@ struct FlexCellKey {
             this.y = y & LEVEL_MASK;
             this.level = level;
         }
+    private this (ulong rawValue)
+        out {
+            assert(level <= MAX_LEVEL, "invalid level %s (max %s)".format(level, MAX_LEVEL));
+            uint MAX_LEVEL = (1U << cast(uint)(level+level)) - 1U;
+            assert((this.x <= MAX_LEVEL), "invalid x value 0x%x (max 0x%x)".format(this.x, MAX_LEVEL));
+            assert((this.y <= MAX_LEVEL), "invalid y value 0x%x (max 0x%x)".format(this.y, MAX_LEVEL));
+        } do {
+            this.value = rawValue;
+        }
+
+    static FlexCellKey ValidatedFromRaw (ulong value) {
+        return FlexCellKey(value);
+    }
 
     ulong opHash () {
         return value;
@@ -44,8 +64,8 @@ struct FlexCellKey {
     static ubyte getLevel (TAABB!PolarNorm bounds) {
         // auto maxSpan = bounds.size();
         auto maxSpan = max(
-            bounds.maxv.x - bounds.minv.x,
-            bounds.maxv.y - bounds.minv.y
+            abs(bounds.maxv.x - bounds.minv.x),
+            abs(bounds.maxv.y - bounds.minv.y)
         );// * (1/360.0);
         uint level = MAX_LEVEL;
         enum MAX_DIV = 1.0/(1U << (MAX_LEVEL*2));
@@ -74,9 +94,6 @@ struct FlexCellKey {
         uint mask  = ndivs-1;
         double fmult = cast(double)ndivs;
 
-        if (point.x < 1) point.x += 0.5;
-        if (point.y < 1) point.y += 0.5;
-
         // writefln("FLEXCELLKEY %s * %s => %s", fmult, point, point * fmult);
         uint x = cast(uint)(point.x * fmult) & mask;
         uint y = cast(uint)(point.y * fmult) & mask;
@@ -93,7 +110,7 @@ struct FlexCellKey {
     }
     @property double sizePolarNorm () const {
         auto l = cast(ulong)(level);
-        return cast(double)(1LU << (l+l));
+        return 1.0 / cast(double)(1LU << (l+l));
     }
     @property AABB boundsPolarNorm () const {
         auto minv = minCoordPolarNorm();

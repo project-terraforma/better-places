@@ -1,0 +1,16 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/pipeline
+pipeline.so
+pipeline.dylib
+pipeline.dll
+pipeline.a
+pipeline.lib
+pipeline-test-*
+*.exe
+*.pdb
+*.o
+*.obj
+*.lst

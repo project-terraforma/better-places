@@ -1,14 +1,34 @@
 {
-    "libs": ["raylib"],
-    "lflags-posix": ["-L."],
-    "lflags-osx": ["-rpath", "@executable_path/"],
-    "lflags-linux": ["-rpath=$$ORIGIN"],
-    "description": "experimental map viewer",
-    "name": "mapview",
-    "dependencies": { "raylib-d": "~>5.5.3" },
-    "importPaths": ["source", "../data/tools"],
-    "sourcePaths": ["source", "../data/tools/models"],
-    "authors": ["Seiji Emery"],
-    "copyright": "Copyright © 2026, Seiji Emery",
-    "license": "Apache-2.0"
+	"authors": [
+		"Seiji Emery"
+	],
+	"copyright": "Copyright © 2026, Seiji Emery",
+	"dependencies": {
+		"msgpack-d": "~>1.0.5",
+		"raylib-d": "~>5.5.3"
+	},
+	"description": "experimental map viewer",
+	"importPaths": [
+		"source",
+		"../data/tools"
+	],
+	"lflags-linux": [
+		"-rpath=$$ORIGIN"
+	],
+	"lflags-osx": [
+		"-rpath",
+		"@executable_path/"
+	],
+	"lflags-posix": [
+		"-L."
+	],
+	"libs": [
+		"raylib"
+	],
+	"license": "Apache-2.0",
+	"name": "mapview",
+	"sourcePaths": [
+		"source",
+		"../data/tools/models"
+	]
 }

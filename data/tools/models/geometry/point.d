@@ -16,6 +16,11 @@ struct TPoint (Unit=PolarDeg) {
             this.y = y;
         }
     }
+    // invariant {
+    //     static if (is(Unit == PolarNorm)) {
+    //         assert(x >= 0 && x <= 1 && y >= 0 && y <= 1, "invalid unclamped value %s, %s!".format(x, y));
+    //     }
+    // }
 
     TPoint!U to (U)() const {
         static if (is(U == Unit)) { return this; }

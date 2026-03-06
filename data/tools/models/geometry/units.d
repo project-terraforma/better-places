@@ -1,6 +1,8 @@
 module models.geometry.units;
+import std.math: fmod;
 
 alias DefaultUnit = PolarDeg;
+
 
 static struct PolarDeg {
     alias This = PolarDeg;
@@ -8,9 +10,9 @@ static struct PolarDeg {
     static auto to (Unit)(T value) {
         static if (is(Unit == This)) { return value; }
         else static if (is(Unit == PolarNorm)) {
-            return cast(Unit.T)(
-                (value * (1.0 / 180.0) + 0.5)
-            );
+            value = fmod(value, 360.0);
+            if (value < 0.0) value += 360.0;
+            return cast(Unit.T)(value / 360.0);
         }
         else static if (is(Unit == PolarRad)) {
             return cast(Unit.T)(
@@ -27,6 +29,8 @@ static struct PolarRad {
 static struct PolarNorm {
     alias This = PolarNorm;
     alias T = double;
+
+    static T clamp (T)(T value) { return value.wrapToNorm(); }
 
     static auto to (Unit)(T value) {
         static if (is(Unit == This)) { return value; }

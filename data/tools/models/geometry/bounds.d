@@ -83,6 +83,7 @@ struct TAABB(U=DefaultUnit) {
     void grow (Ring r)    { grow(r.points); }
     void grow (Polygon p) { foreach (r; p.rings) { grow(r); } }
     void grow (MultiPolygon mp) { foreach (p; mp.polygons) { grow(p); } }
+    void grow (AABB bounds) { grow(bounds.minv); grow(bounds.maxv); }
 
     void assign (Ring r)
         in { assert(r.points.length > 0); }
