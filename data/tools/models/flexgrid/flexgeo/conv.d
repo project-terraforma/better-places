@@ -55,12 +55,14 @@ struct FlexGeoBuilder {
         auto ent = g.entities.length - 1;
         stack ~= EntityBuildInfo(cast(uint)ent, bounds);
     }
-    void end () {
+    void end (bool writeChildOffsetToPayload = true) {
         assert(stack.length);
         auto currentPos = g.entities.length - 1;
         auto tos = stack[$-1];
         assert(currentPos >= tos.entity);
-        g.entities[tos.entity].payload = cast(uint)(currentPos - tos.entity);
+        if (writeChildOffsetToPayload) { // do this only for Polygon etc types, not Ring etc
+            g.entities[tos.entity].payload = cast(uint)(currentPos - tos.entity);
+        }
         if (stack.length > 1) {
             if (stack[$-2].hasSetBounds) {
                 stack[$-2].bounds.grow(tos.bounds);
@@ -69,6 +71,11 @@ struct FlexGeoBuilder {
             }
         } else {
             g.bounds = stack[$-1].bounds;
+        }
+        if (tos.boundsIndex < uint.max) {
+            assert(tos.boundsIndex + 2 <= g.points.length);
+            g.points[tos.boundsIndex + 0] = tos.bounds.minv;
+            g.points[tos.boundsIndex + 1] = tos.bounds.maxv;
         }
         stack.length -= 1;
     }
@@ -111,7 +118,7 @@ struct FlexGeoBuilder {
             }
             stack[$-1].bounds = bounds;
             stack[$-1].hasSetBounds = true;
-            end();
+            end(false);
         }
         end();
     }

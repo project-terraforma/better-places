@@ -42,38 +42,40 @@ private bool matchesAnyPolygon (TQuery)(TQuery query, const(Entity)[] ents, ref 
     // pass 1: check for any positive nested polygon or outer rings matches, short circuiting
     for (uint i = 0, n = ents.length; i < n; ++i) {
         auto child = ents[i];
-        case GeoType.Bounds: bounds = geo[0..2]; geo = geo[2..$]; break;
-        case GeoType.RingInner: {
-            auto ringPoints = geo[0..child.payload]; geo = geo[child.payload..$];
-            if (innerPolygonsCount < INNER_POLYGONS_CACHED_MAX) {
-                innerPolys[innerPolygonsCount++] = InnerPoly(ringPoints, bounds);
-            } else {
-                innerPolysOverflow ~= InnerPoly(ringPoints, bounds);
+        switch (child.type) {
+            case GeoType.Bounds: bounds = geo[0..2]; geo = geo[2..$]; break;
+            case GeoType.RingInner: {
+                auto ringPoints = geo[0..child.payload]; geo = geo[child.payload..$];
+                if (innerPolygonsCount < INNER_POLYGONS_CACHED_MAX) {
+                    innerPolys[innerPolygonsCount++] = InnerPoly(ringPoints, bounds);
+                } else {
+                    innerPolysOverflow ~= InnerPoly(ringPoints, bounds);
+                }
+                bounds = null;
+                break;
             }
-            bounds = null;
-            break;
-        }
-        case GeoType.RingOuter: {
-            auto ringPoints = geo[0..child.payload]; geo = geo[child.payload..$];
-            auto ringBounds = bounds; bounds = null;
-            if (hasOuterPolygonHit) continue;
-            if (bounds && !query.matches(AABB(ringBounds[0], ringBounds[1]))) continue;
-            if (query.matches(Prim(PrimType.RingPoints, ringPoints))) {
-                hasOuterPolygonHit = true;
+            case GeoType.RingOuter: {
+                auto ringPoints = geo[0..child.payload]; geo = geo[child.payload..$];
+                auto ringBounds = bounds; bounds = null;
+                if (hasOuterPolygonHit) continue;
+                if (bounds && !query.matches(AABB(ringBounds[0], ringBounds[1]))) continue;
+                if (query.matches(Prim(PrimType.RingPoints, ringPoints))) {
+                    hasOuterPolygonHit = true;
+                }
+                break;
             }
-            break;
-        }
-        // handle recursive polygons
-        case GeoType.Polygon: {
-            auto polyPoints = geo[0..child.payload]; geo = geo[child.payload..$];
-            auto polyBounds = bounds; bounds = null;
-            auto childEnts = ents[i+1..min(n, i+1+child.payload)];
-            i += child.payload;
-            if (bounds && !query.matches(AABB(polyBounds[0], polyBounds[1]))) continue;
-            if (matchesAnyPolygon(query, childEnts, geo)) {
-                return true;
+            // handle recursive polygons
+            case GeoType.Polygon: {
+                auto polyPoints = geo[0..child.payload]; geo = geo[child.payload..$];
+                auto polyBounds = bounds; bounds = null;
+                auto childEnts = ents[i+1..min(n, i+1+child.payload)];
+                i += child.payload;
+                if (bounds && !query.matches(AABB(polyBounds[0], polyBounds[1]))) continue;
+                if (matchesAnyPolygon(query, childEnts, geo)) {
+                    return true;
+                }
+                break;
             }
-            break;
         }
     }
     // check if we can terminate

@@ -43,5 +43,5 @@ void load (FlexCell cell, ubyte[] dataBytes) {
     cell.points = data.points;
     cell.objects = data.objects;
     cell.rawProps = data.rawProps;
-    data.bounds = cell.bounds;
+    cell.bounds = data.bounds;
 }

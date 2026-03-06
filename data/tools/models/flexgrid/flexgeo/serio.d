@@ -75,12 +75,15 @@ void load (out FlexGeo g, ubyte[] data) {
                 "invalid data headers: data.length = %s, data (offset = %s, end = %s), entity count = %s * 4 = %s"
                 .format(data.length, dataOffset, dataEnd, entityCount, entityCount * 4)
             );
+            auto dataSz = dataEnd - dataOffset;
+            auto pointCount = dataSz / Point.sizeof;
             g.entities = (cast(Entity*)(data.ptr + hdrBytes))[0 .. entityCount];
-            g.points = (cast(Point*)(data.ptr + dataOffset))[0 .. dataEnd - dataOffset];
+            g.points = (cast(Point*)(data.ptr + dataOffset))[0 .. pointCount];
             g.finishLoad();
             g.validate();
         } break;
         case "FLX2": {
+            data = data[4..$];
             auto packed = data.unpack!FlexGeoPacked2;
             static assert(g.points[0].sizeof == double.sizeof * 2);
             static assert(Entity.sizeof == uint.sizeof);
