@@ -4,6 +4,7 @@
 	],
 	"copyright": "Copyright © 2026, Seiji Emery",
 	"dependencies": {
+		"d2sqlite3": "~>1.0.0",
 		"msgpack-d": "~>1.0.5",
 		"raylib-d": "~>5.5.3"
 	},

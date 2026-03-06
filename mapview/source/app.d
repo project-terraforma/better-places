@@ -3,7 +3,8 @@ import models.omf;
 import models.geojson;
 import models.geometry;
 import models.flexgrid;
-import models.flexgrid_plugins.omf_loader;
+import models.flexgrid.flexgeo;
+import models.flexgrid.flexstore;
 import models.flexgrid_plugins.flexgrid_viewer;
 import std;
 
@@ -105,10 +106,9 @@ public:
     void render () {
         r.newFrame();
         update();
-        if (data) {
+        if (dataLoaded) {
             gridViewer.view = viewBounds;
             r.render(this, gridViewer);
-            // gridViewer.render();
         } else {
             if (dataLoadErr) {
                 ClearBackground(Color(100,50,50,255));
@@ -187,6 +187,9 @@ public:
         textf("view bounds: %s", viewBounds);
         textf("view size:   %s", viewBounds.size);
 
+        textf("view bounds: %s", viewBounds.to!PolarNorm);
+        textf("view size:   %s", viewBounds.size.to!PolarNorm.to!Meters);
+
         float dt = GetFrameTime();
         textf("dt: %s", dt);
         textf("FPS: %s", 1/dt);
@@ -229,21 +232,56 @@ public:
 struct MapLoader {
     string exeDir;
     void load (shared MapView view, ref shared OmfDataset outData, string dataPath = "data/omf/santa_cruz") {
+        auto grid = (cast(MapView)view).grid;
+
+        auto dbPath = buildPath("..", "data", "flexgrid", "santa_cruz.db");
+        if (dbPath.exists) {
+            writefln("loading from sqlite '%s'", dbPath);
+            scope store = new FlexStore!FlexStoreSqlite3Storage(dbPath, grid);
+            store.load();
+            return;
+        }
+
         writefln("loading dataset '%s'", dataPath);
         writefln("current directory: %s", exeDir);
-
         dataPath = buildPath("..", dataPath);
 
-        enforce(dataPath.exists, "can't located dataset directory '%s'".format(dataPath));
-        foreach(file; [".bounds.txt"]~["address", "building", "building_part", "place"]
-            .map!(part => part~".geojson").array
+        enforce(dataPath.exists, "can't locate dataset directory '%s'".format(dataPath));
+        foreach (file; [".bounds.txt"] ~ ["address", "building", "building_part", "place"]
+            .map!(part => part ~ ".geojson").array
         ) {
             auto path = dataPath.buildPath(file);
             enforce(path.exists, "missing file '%s'".format(path));
         }
-        auto data = new OmfDataset().loadGeoJson(dataPath);
-        (cast(MapView)view).grid.load(data);
-        outData = cast(shared OmfDataset)data;
+        scope dataset = new OmfDataset().loadGeoJson(dataPath);
+        static foreach (PART; OmfDataset.PARTS) {
+            .load(grid, mixin("dataset." ~ PART), PART);
+        }
+        outData = cast(shared OmfDataset) dataset;
+    }
+}
+
+// Load a single OMF collection into the grid as a named layer.
+// Mirrors the equivalent function in pipeline/source/app.d.
+void load (TPart)(FlexGrid grid, OmfCollection!TPart collection, string name) {
+    auto layerName = "omf.%s".format(name);
+    auto layerId   = grid.getOrCreateLayer(layerName).id;
+    foreach (item; collection.items) {
+        static if (__traits(compiles, item.pos)) {
+            auto point = item.pos.to!PolarNorm;
+            auto key   = FlexCellKey.from(point);
+            auto cell  = grid.getOrCreateCell(key, layerId);
+            cell.addPoint(item.id, point);
+            auto id    = cell.getOrInsertId(item.id);
+            cell.decodedProps[id] = item.props;
+        } else {
+            auto geo  = toFlexGeo(item.geo);
+            auto key  = FlexCellKey.from(geo.bounds);
+            auto cell = grid.getOrCreateCell(key, layerId);
+            cell.addGeometry(item.id, geo);
+            auto id   = cell.getOrInsertId(item.id);
+            cell.decodedProps[id] = item.props;
+        }
     }
 }
 class MapRenderer {
@@ -350,22 +388,8 @@ class MapRenderer {
         }
     }
     void render (MapView view, Viewer gridViewer) {
-        auto data = view.data;
-        if (!data) {
-            textf("MISSING MAP OBJECT!");
-        } else {
-            render(view, cast(const(OmfDataset))data, gridViewer);
-        }
-    }
-    void render (MapView view, const(OmfDataset) data, Viewer gridViewer) {
-        assert(data !is null);
         auto tr = ViewTransform(view);
-        gridViewer.render(this, tr); // temp hook into flexgrid_plugins/flexgrid_viewer to use
-                                    // polyfill with this renderer's rendering fns, transforms etc
-
-        // static foreach (part; data.PARTS) {
-        //     render(view, mixin("data."~part), tr);
-        // }
+        gridViewer.render(this, tr);
     }
     void render (ViewTransform tr, Geometry g, Color c) {
         g.value.tryVisit!(
@@ -405,6 +429,7 @@ class MapRenderer {
     void draw (AABB r, Color color, ViewTransform tr, float lineThickness = 1) {
         if (!tr.viewBounds.contains(r)) return;
         auto a = tr.transform(r.minv), b = tr.transform(r.maxv);
+        writefln("drawing %s, %s", a, b);
         DrawLineEx(a, Vector2(b.x, a.y), lineThickness, color);
         DrawLineEx(a, Vector2(a.x, b.y), lineThickness, color);
 

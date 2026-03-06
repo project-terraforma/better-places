@@ -20,7 +20,7 @@ class Viewer {
                 newView.to!Meters
             );
             m_view = newView;
-            m_viewLevel = FlexCellKey.getLevel(view);
+            m_viewLevel = FlexCellKey.getLevel(newView);
             writefln("View level = %s", m_viewLevel);
             m_viewKeyMin = FlexCellKey.from(newView.minv, m_viewLevel);
             m_viewKeyMax = FlexCellKey.from(newView.maxv, m_viewLevel);
@@ -54,31 +54,33 @@ class Viewer {
         // m_grid.visitCells(view, &renderCell);
         auto v = this.view;
         r.textf("view bounds %s", v);
-        foreach (kv; grid.cells.byKeyValue) {
-            auto cellBounds = kv.key.bounds;
-            bool inBounds = v.contains(cellBounds);
-            r.textf("checking cell bounds: %x => (%s,%s) => %s",
-                kv.key.value, cellBounds.minv, cellBounds.maxv,
-                inBounds);
+        foreach (layer; grid.layers.byValue) {
+            foreach (kv; layer.cells.byKeyValue) {
+                auto cellBounds = kv.key.bounds;
+                bool inBounds = v.contains(cellBounds);
+                r.textf("checking cell %s bounds: %x => (%s,%s) => %s",
+                    layer.name, kv.key.value, cellBounds.minv, cellBounds.maxv,
+                    inBounds);
 
-            r.draw(cellBounds.to!PolarDeg, Colors.BLUE, tr, 2);
-            if (!v.contains(cellBounds)) continue;
+                r.draw(cellBounds.to!PolarDeg, Colors.BLUE, tr, 2);
+                if (!inBounds) continue;
 
-            // if (!v.contains(kv.key.bounds)) continue;
-            auto cell = kv.value;
-            renderCell(cell, r, tr);
+                renderCell(kv.value, r, tr);
+            }
         }
     }
     private void renderCell (TR, TTR)(FlexCell cell, TR renderer, TTR transform) {
         auto viewBounds = view;
-        // auto viewBounds = cell.bounds.clip(view);
-        // writefln("rendering %s at %s: %s", cell, cell.level, viewBounds);
-        foreach (kv; cell.bbx.byKeyValue) {
+        foreach (kv; cell.geoBounds.byKeyValue) {
             auto bounds = kv.value;
             if (!viewBounds.contains(bounds)) continue;
-            auto geo = kv.key in cell.geo;
-            if (geo) renderer.render(transform, *geo, Colors.GREEN);
-            // auto props = kv.key in cell.props;
+            renderer.draw(bounds.to!PolarDeg, Colors.GREEN, transform, 1);
+            // TODO: render FlexGeo geometry (cell.geo[kv.key]) once a FlexGeo renderer exists
+        }
+        foreach (kv; cell.points.byKeyValue) {
+            auto pt = kv.value;
+            if (!viewBounds.contains(pt)) continue;
+            renderer.draw(pt.to!PolarDeg, Colors.RED, 3.0f, transform);
         }
     }
 }
