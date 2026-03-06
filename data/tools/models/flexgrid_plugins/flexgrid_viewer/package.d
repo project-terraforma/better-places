@@ -3,6 +3,9 @@ import models.flexgrid;
 import raylib;
 import std;
 
+alias AABB = TAABB!PolarNorm;
+alias Point = TPoint!PolarNorm;
+
 class Viewer {
     private FlexGrid m_grid;
     private AABB m_view;
@@ -58,11 +61,11 @@ class Viewer {
             foreach (kv; layer.cells.byKeyValue) {
                 auto cellBounds = kv.key.bounds;
                 bool inBounds = v.contains(cellBounds);
-                r.textf("checking cell %s bounds: %x => (%s,%s) => %s",
-                    layer.name, kv.key.value, cellBounds.minv, cellBounds.maxv,
-                    inBounds);
+                // r.textf("checking cell %s bounds: %x => (%s,%s) => %s",
+                //     layer.name, kv.key.value, cellBounds.minv, cellBounds.maxv,
+                //     inBounds);
 
-                r.draw(cellBounds.to!PolarDeg, Colors.BLUE, tr, 2);
+                r.draw(cellBounds, Colors.BLUE, tr, 2);
                 if (!inBounds) continue;
 
                 renderCell(kv.value, r, tr);
@@ -74,13 +77,13 @@ class Viewer {
         foreach (kv; cell.geoBounds.byKeyValue) {
             auto bounds = kv.value;
             if (!viewBounds.contains(bounds)) continue;
-            renderer.draw(bounds.to!PolarDeg, Colors.GREEN, transform, 1);
+            renderer.draw(bounds, Colors.GREEN, transform, 1);
             // TODO: render FlexGeo geometry (cell.geo[kv.key]) once a FlexGeo renderer exists
         }
         foreach (kv; cell.points.byKeyValue) {
             auto pt = kv.value;
             if (!viewBounds.contains(pt)) continue;
-            renderer.draw(pt.to!PolarDeg, Colors.RED, 3.0f, transform);
+            renderer.draw(pt, Colors.RED, 3.0f, transform);
         }
     }
 }

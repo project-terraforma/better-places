@@ -8,12 +8,20 @@ import models.flexgrid.flexstore;
 import models.flexgrid_plugins.flexgrid_viewer;
 import std;
 
-alias Geometry = models.geojson.Geometry;
+alias Geometry = TGeometry!PolarNorm;
 alias Point = Geometry.Point;
 alias Ring = Geometry.Ring;
 alias AABB = Geometry.AABB;
 alias Polygon = Geometry.Polygon;
 alias MultiPolygon = Geometry.MultiPolygon;
+
+
+// alias Geometry = models.geojson.Geometry;
+// alias Point = Geometry.Point;
+// alias Ring = Geometry.Ring;
+// alias AABB = Geometry.AABB;
+// alias Polygon = Geometry.Polygon;
+// alias MultiPolygon = Geometry.MultiPolygon;
 
 void main(string[] args) {
     auto exeDir = args[0].dirName;
@@ -51,9 +59,9 @@ public:
     Throwable dataLoadErr = null;
 
     // overall view bounds
-    AABB vb0 = AABB(
-        Point(-122.081623,36.946668),
-        Point(-121.932878,37.003170)
+    auto vb0 = TAABB!PolarDeg(
+        TPoint!PolarDeg(-122.081623,36.946668),
+        TPoint!PolarDeg(-121.932878,37.003170)
     );
     double zoomLevel    = 0.2;
     double minZoomLevel = -5; // exponents
@@ -74,10 +82,10 @@ public:
     }
 
     @property AABB viewPosLimits () const {
-        return vb0.scaledAroundCenter(10.0);
+        return vb0.to!PolarNorm.scaledAroundCenter(10.0);
     }
     void resetViewBounds() {
-        this.viewBounds = vb0.scaledAroundCenter(0.4);
+        this.viewBounds = vb0.to!PolarNorm.scaledAroundCenter(0.4);
     }
 
     void loadAsync(){
@@ -184,11 +192,11 @@ public:
         this.gridViewer.view = bounds;
     }
     void update () {
-        textf("view bounds: %s", viewBounds);
-        textf("view size:   %s", viewBounds.size);
+        textf("view bounds: %s", viewBounds.to!PolarDeg);
+        textf("view size:   %s", viewBounds.size.to!PolarDeg);
 
-        textf("view bounds: %s", viewBounds.to!PolarNorm);
-        textf("view size:   %s", viewBounds.size.to!PolarNorm.to!Meters);
+        textf("view bounds: %s", viewBounds);
+        textf("view size:   %s", viewBounds.size.to!Meters);
 
         float dt = GetFrameTime();
         textf("dt: %s", dt);
@@ -429,127 +437,126 @@ class MapRenderer {
     void draw (AABB r, Color color, ViewTransform tr, float lineThickness = 1) {
         if (!tr.viewBounds.contains(r)) return;
         auto a = tr.transform(r.minv), b = tr.transform(r.maxv);
-        writefln("drawing %s, %s", a, b);
         DrawLineEx(a, Vector2(b.x, a.y), lineThickness, color);
         DrawLineEx(a, Vector2(a.x, b.y), lineThickness, color);
 
         DrawLineEx(b, Vector2(a.x, b.y), lineThickness, color);
         DrawLineEx(b, Vector2(b.x, a.y), lineThickness, color);
     }
-    struct CachedGeometry {
-        AABB    bounds;
-        Point[] points;
-        uint[]  rings;
+    // struct CachedGeometry {
+    //     AABB    bounds;
+    //     Point[] points;
+    //     uint[]  rings;
 
-        this (const Polygon p) {
-            assert(p.rings.length);
-            assert(p.rings[0].points.length);
-            this.bounds = AABB(p.rings[0].points[0]);
-            foreach (ring; p.rings) insert(ring);
-        }
-        this (const MultiPolygon p) {
-            assert(p.polygons.length);
-            assert(p.polygons[0].rings.length);
-            assert(p.polygons[0].rings[0].points.length);
-            this.bounds = AABB(p.polygons[0].rings[0].points[0]);
-            foreach (poly; p.polygons) {
-                foreach (ring; poly.rings) {
-                    insert(ring);
-                }
-            }
-        }
-        private void insert(const Ring r) {
-            assert(r.points.length);
-            if (!r.points.length) return;
-            this.points ~= r.points;
-            this.rings ~= cast(uint)r.points.length;
-            foreach (p; r.points) this.bounds.grow(p);
-        }
-        void draw (MapRenderer r, Color color, ViewTransform tr, float lineThickness = 1) {
-            uint start = 0;
-            foreach (ring; this.rings) {
-                uint n = ring, end = start + n;
-                assert(n > 0);
-                Vector2 p0 = tr.transform(this.points[start]);
-                Vector2 a = p0;
-                for (uint i = start + 1; i < end; ++i) {
-                    Vector2 b = tr.transform(this.points[i]);
-                    DrawLineEx(a, b, lineThickness, color);
-                    a = b;
-                }
-                // DrawLineV(a, p0, color);
-                start = end;
-            }
-        }
-    }
-    struct GeoCache {
-        CachedGeometry[UUID] cache;
-        AABB[UUID] boundsCache;
+    //     this (const Polygon p) {
+    //         assert(p.rings.length);
+    //         assert(p.rings[0].points.length);
+    //         this.bounds = AABB(p.rings[0].points[0]);
+    //         foreach (ring; p.rings) insert(ring);
+    //     }
+    //     this (const MultiPolygon p) {
+    //         assert(p.polygons.length);
+    //         assert(p.polygons[0].rings.length);
+    //         assert(p.polygons[0].rings[0].points.length);
+    //         this.bounds = AABB(p.polygons[0].rings[0].points[0]);
+    //         foreach (poly; p.polygons) {
+    //             foreach (ring; poly.rings) {
+    //                 insert(ring);
+    //             }
+    //         }
+    //     }
+    //     private void insert(const Ring r) {
+    //         assert(r.points.length);
+    //         if (!r.points.length) return;
+    //         this.points ~= r.points;
+    //         this.rings ~= cast(uint)r.points.length;
+    //         foreach (p; r.points) this.bounds.grow(p);
+    //     }
+    //     void draw (MapRenderer r, Color color, ViewTransform tr, float lineThickness = 1) {
+    //         uint start = 0;
+    //         foreach (ring; this.rings) {
+    //             uint n = ring, end = start + n;
+    //             assert(n > 0);
+    //             Vector2 p0 = tr.transform(this.points[start]);
+    //             Vector2 a = p0;
+    //             for (uint i = start + 1; i < end; ++i) {
+    //                 Vector2 b = tr.transform(this.points[i]);
+    //                 DrawLineEx(a, b, lineThickness, color);
+    //                 a = b;
+    //             }
+    //             // DrawLineV(a, p0, color);
+    //             start = end;
+    //         }
+    //     }
+    // }
+    // struct GeoCache {
+    //     CachedGeometry[UUID] cache;
+    //     AABB[UUID] boundsCache;
 
-        ref CachedGeometry get (T)(ref const T item) {
-            auto ptr = item.id in cache;
-            if (!ptr) {
-                auto newCachedGeometry = CachedGeometry(item.geo);
-                boundsCache[item.id] = newCachedGeometry.bounds;
-                return cache[item.id] = newCachedGeometry;
-            }
-            return *ptr;
-        }
-        AABB getBounds (T)(ref const T item) {
-            auto ptr = item.id in boundsCache;
-            return ptr ? *ptr : get(item).bounds;
-        }
-        bool inBounds (T)(ref const T item, ViewTransform tr) {
-            return tr.viewBounds.contains(getBounds(item));
-        }
-    }
-    GeoCache geoCache;
+    //     ref CachedGeometry get (T)(ref const T item) {
+    //         auto ptr = item.id in cache;
+    //         if (!ptr) {
+    //             auto newCachedGeometry = CachedGeometry(item.geo);
+    //             boundsCache[item.id] = newCachedGeometry.bounds;
+    //             return cache[item.id] = newCachedGeometry;
+    //         }
+    //         return *ptr;
+    //     }
+    //     AABB getBounds (T)(ref const T item) {
+    //         auto ptr = item.id in boundsCache;
+    //         return ptr ? *ptr : get(item).bounds;
+    //     }
+    //     bool inBounds (T)(ref const T item, ViewTransform tr) {
+    //         return tr.viewBounds.contains(getBounds(item));
+    //     }
+    // }
+    // GeoCache geoCache;
 
     void render (const MapView view, ref const Building item, ViewTransform tr) {
-        if (!geoCache.inBounds(item, tr)) return;
-        CachedGeometry* g = &(geoCache.get(item));
-        if (tr.viewBounds.contains(g.bounds)) {
-            bool mouseover = false;
-            float boundsLineThickness = 1;
-            float polyLineThickness = 1;
-            enum MOUSEOVER_LINE_THICKNESS = 3;
-            if (g.bounds.contains(tr.cursorPos)) {
-                boundsLineThickness = MOUSEOVER_LINE_THICKNESS;
-                mouseover = item.geo.contains(tr.cursorPos);
-                if (mouseover) {
-                    polyLineThickness = MOUSEOVER_LINE_THICKNESS;
-                }
-            }
-            draw(g.bounds, Colors.RED, tr, boundsLineThickness);
+        // if (!geoCache.inBounds(item, tr)) return;
+        // CachedGeometry* g = &(geoCache.get(item));
+        // if (tr.viewBounds.contains(g.bounds)) {
+        //     bool mouseover = false;
+        //     float boundsLineThickness = 1;
+        //     float polyLineThickness = 1;
+        //     enum MOUSEOVER_LINE_THICKNESS = 3;
+        //     if (g.bounds.contains(tr.cursorPos)) {
+        //         boundsLineThickness = MOUSEOVER_LINE_THICKNESS;
+        //         mouseover = item.geo.contains(tr.cursorPos.to!Polar);
+        //         if (mouseover) {
+        //             polyLineThickness = MOUSEOVER_LINE_THICKNESS;
+        //         }
+        //     }
+        //     draw(g.bounds, Colors.RED, tr, boundsLineThickness);
 
-            uint src = 0;
-            foreach (s; item.props["sources"].array) {
-                switch (s.object["dataset"].str) {
-                    case "OpenStreetMap":           src |= 1; break;
-                    case "Microsoft ML Buildings":  src |= 2; break;
-                    default:
-                }
-            }
-            immutable Color[4] COLORS_BY_SRC = [
-                Colors.BLUE,
-                Colors.ORANGE,
-                Colors.PURPLE,
-                Colors.GREEN
-            ];
-            g.draw(this, COLORS_BY_SRC[src], tr, polyLineThickness);
+        //     uint src = 0;
+        //     foreach (s; item.props["sources"].array) {
+        //         switch (s.object["dataset"].str) {
+        //             case "OpenStreetMap":           src |= 1; break;
+        //             case "Microsoft ML Buildings":  src |= 2; break;
+        //             default:
+        //         }
+        //     }
+        //     immutable Color[4] COLORS_BY_SRC = [
+        //         Colors.BLUE,
+        //         Colors.ORANGE,
+        //         Colors.PURPLE,
+        //         Colors.GREEN
+        //     ];
+        //     g.draw(this, COLORS_BY_SRC[src], tr, polyLineThickness);
 
-            if (mouseover) {
-                textLayoutPosY += fontSize;
-                textf("Building %s", item.id);
-                foreach (kv; item.props.byKeyValue) {
-                    textf("%s: %s", kv.key, kv.value);
-                }
-            }
-        }
-        // draw(item.geo, Colors.GREEN, tr);
+        //     if (mouseover) {
+        //         textLayoutPosY += fontSize;
+        //         textf("Building %s", item.id);
+        //         foreach (kv; item.props.byKeyValue) {
+        //             textf("%s: %s", kv.key, kv.value);
+        //         }
+        //     }
+        // }
+        // // draw(item.geo, Colors.GREEN, tr);
     }
     void render (const MapView view, ref const BuildingPart item, ViewTransform tr) {
-        draw(item.geo, Colors.BLUE, tr);
+        // draw(item.geo, Colors.BLUE, tr);
     }
 
 
@@ -567,7 +574,7 @@ class MapRenderer {
     void drawPoint (TPointItem)(const MapView view, ref const TPointItem item, ViewTransform tr, Color color) {
         float circRadius = tr.zoomBasedCirclePointRadius;
         if (circRadius <= 0) return;
-        auto pos = item.pos;
+        auto pos = item.pos.to!PolarNorm;
         if (!tr.viewBounds.contains(pos)) return;
 
         Vector2 pt = tr.transform(pos); // screenspace

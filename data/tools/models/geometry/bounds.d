@@ -133,7 +133,7 @@ struct TAABB(U=DefaultUnit) {
     }
     This clip (This other) const { return this.boundsShapeIntersect(other); }
 
-    auto to (U2)() {
+    auto to (U2)() const {
         static if (is(U == U2) || is(U2 == This)) { return this; }
         else static if (__traits(compiles, TAABB!(U2.Unit))) {
             return TAABB!(U2.Unit)(
