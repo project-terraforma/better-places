@@ -2,6 +2,23 @@ module models.geometry.point;
 public import models.geometry.units;
 import std;
 
+alias Scalar = TScalar;
+
+struct TScalar (Unit=Meters) {
+    alias This = TScalar!Unit;
+    alias T = Unit.T;
+    T value;
+
+    TScalar!U to (U)() const {
+        static if (is(U == Unit)) { return this; }
+        else static if (__traits(compiles, U.from!Unit(value))) {
+            return TScalar!U( U.from!Unit(value) );
+        } else static if (__traits(compiles, Unit.to!U(value))) {
+            return TScalar!U( Unit.to!U(value) );
+        } else static assert(false, "unknown conversion from "~Unit.stringof~" to "~U.stringof);
+    }
+}
+
 struct TPoint (Unit=PolarDeg) {
     alias This = TPoint!Unit;
     alias T = Unit.T;

@@ -1,6 +1,6 @@
 module models.flexgrid.flexstore;
 import models.flexgrid;
-import core.sync: Mutex;
+import core.sync.mutex: Mutex;
 import d2sqlite3;
 import std;
 
@@ -37,6 +37,8 @@ struct FlexStoreSqlite3Storage {
             if (open) return;
             open = true;
             this.db = Database(path);
+            db.run("PRAGMA journal_mode = WAL");
+            db.run("PRAGMA synchronous = NORMAL");
             db.run(q{
                 CREATE TABLE IF NOT EXISTS flexgrid (
                     key     INTEGER,
@@ -82,11 +84,11 @@ struct FlexStoreSqlite3Storage {
         assert(open);
         synchronized(mutex){
             if (loadedGrid) return;
-            loadedGrid = true;
         }
         loadLayers();
         preloadGrid();
         loadAll();
+        synchronized(mutex){ loadedGrid = true; }
     }
     void load (string path, FlexGrid grid) {
         this.path = path;
@@ -102,7 +104,7 @@ struct FlexStoreSqlite3Storage {
         }
     }
     void loadAll () {
-        enforce(open && loadedGrid);
+        enforce(open);
         auto result = db.execute("SELECT key,layer,data from flexgrid");
         foreach (row; result) {
             grid.load(FlexCellKey.ValidatedFromRaw(row.peek!ulong(0)), row.peek!uint(1), row.peek!(ubyte[])(2));
@@ -114,8 +116,11 @@ struct FlexStoreSqlite3Storage {
         this.grid = grid;
         this.path = path;
         if (!open) lazyConnectDb();
+        db.begin();
+        scope(failure) db.rollback();
         saveLayers();
         saveGrid();
+        db.commit();
     }
     private void saveLayers () {
         writefln("save layers (layers = %s)", grid.layers.length);
@@ -139,7 +144,7 @@ struct FlexStoreSqlite3Storage {
         foreach (layer; grid.layers.byValue) {
             writefln("saving layer '%s'", layer.name);
             foreach (cell; layer.cells.byValue) {
-                writefln("saving cell '%s'/'%s'", layer.name, cell.cellKey.value);
+                // writefln("saving cell '%s'/'%s'", layer.name, cell.cellKey.value);
                 stmt.bind(1, cell.cellKey.value.reinterpLong);
                 stmt.bind(2, layer.id);
                 stmt.bind(3, cell.cellKey.level);

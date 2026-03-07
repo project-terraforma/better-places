@@ -19,10 +19,7 @@ struct BenchInfo {
     }
 }
 
-void loadGeoJson(ref BenchInfo bench, ref FlexGrid grid) {
-    enum DATASET_DIR = "../data/omf";
-    enum DATASET = "santa_cruz";
-    auto dataPath = DATASET_DIR.buildPath(DATASET);
+void loadGeoJson(ref BenchInfo bench, ref FlexGrid grid, string dataPath) {
     enforce(dataPath.exists, "could not open %s", dataPath);
     writefln("loading %s", dataPath);
 
@@ -181,18 +178,19 @@ void loadSql(ref BenchInfo bench, FlexGrid grid, string dbFile) {
 }
 void main(string[] args) {
     enum DATASET_DIR = "../data/omf";
-    enum DATASET = "santa_cruz";
-    auto dataPath = DATASET_DIR.buildPath(DATASET);
     bool doLoadSql = false;
+    string dataset = "santa_cruz";
     if (args.length > 1) {
-        switch (args[1]) {
-            case "sql": doLoadSql = true; break;
-            default:
+        foreach (arg; args[1..$]) {
+            if (arg == "sql") { doLoadSql = true; }
+            else dataset = arg;
         }
     }
+    auto dataPath = DATASET_DIR.buildPath(dataset);
+    writefln("loading %s", dataPath);
     auto dir = DATASET_DIR.buildPath("..", "flexgrid");
     if (!dir.exists) dir.mkdirRecurse;
-    auto dbFile = dir.buildPath(DATASET~".db");
+    auto dbFile = dir.buildPath(dataset~".db");
 
     BenchInfo bench;
     scope grid = new FlexGrid();
@@ -200,16 +198,18 @@ void main(string[] args) {
     if (doLoadSql) {
         loadSql(bench, grid, dbFile);
     } else {
-        loadGeoJson(bench, grid);
+        loadGeoJson(bench, grid, dataPath);
     }
     summarizeStats(bench, grid);
     bench.summary();
 
     BenchInfo b2;
     scope store = new FlexStore!FlexStoreSqlite3Storage(dbFile, grid);
-    b2.start("save to sql");
-    // store.save();
-    b2.stop("save to sql");
+    if (!doLoadSql) {
+        b2.start("save to sql");
+        store.save();
+        b2.stop("save to sql");
+    }
 
     b2.summary();
 }

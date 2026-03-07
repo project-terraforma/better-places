@@ -3,9 +3,10 @@ public import models.flexgrid.common;
 import std;
 
 // enum MAX_LEVEL = 14;
-enum MAX_LEVEL = 8;
+// enum MAX_LEVEL = 8;
 // enum MAX_LEVEL = 10;
 // enum MAX_LEVEL = 7;
+enum MAX_LEVEL = 9;
 
 struct FlexCellKey {
     alias This = FlexCellKey;

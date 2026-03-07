@@ -333,3 +333,15 @@ bool contains (TGeometry,U)(TAABB!U bounds, TGeometry!U geometry, TPoint!U p) {
 bool contains (U)(const TMultiPolygon!U r, TPoint!U p) {
     return contains(cast(TMultiPolygon!U)r, p);
 }
+
+bool withinRadiusOf (U1,U2)(TAABB!U1 bounds, TPoint!U1 point, TScalar!U2 radius) {
+    auto nearestX = clamp(point.x, bounds.minv.x, bounds.maxv.x);
+    auto nearestY = clamp(point.y, bounds.minv.y, bounds.maxv.y);
+    return withinRadiusOf(TPoint!U1(nearestX, nearestY), point, radius);
+}
+bool withinRadiusOf (U1,U2)(TPoint!U1 a, TPoint!U1 point, TScalar!U2 radius) {
+    auto dx = U1.to!(U2)(point.x - a.x);
+    auto dy = U1.to!(U2)(point.y - a.y);
+    auto r2 = radius.value * radius.value;
+    return dx*dx + dy*dy <= r2;
+}

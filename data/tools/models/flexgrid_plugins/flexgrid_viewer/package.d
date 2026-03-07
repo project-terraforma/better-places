@@ -57,173 +57,94 @@ class Viewer {
         // m_grid.visitCells(view, &renderCell);
         auto v = this.view;
         r.textf("view bounds %s", v);
+        bool drawGridRects = r.drawGridRects;
+
         foreach (layer; grid.layers.byValue) {
+            // writefln("%s %s", layer.id, r.layerViews);
+            auto lv = layer.id in r.layerViews;
+            if (lv && !lv.visible) continue;
+            if (!lv) {
+                writefln("layer %s missing view", layer.name);
+            }
+            // if (!lv) { r.layerViews[layer.id] = TR.LayerView(); lv = layer.id in r.layerViews; }
+
             foreach (kv; layer.cells.byKeyValue) {
                 auto cellBounds = kv.key.bounds;
                 bool inBounds = v.contains(cellBounds);
                 // r.textf("checking cell %s bounds: %x => (%s,%s) => %s",
                 //     layer.name, kv.key.value, cellBounds.minv, cellBounds.maxv,
                 //     inBounds);
-
-                r.draw(cellBounds, Colors.BLUE, tr, 2);
+                //
+                if (r.drawGridRects) {
+                    auto mouseover = cellBounds.contains(tr.cursorPos);
+                    r.draw(cellBounds, Colors.BLUE, tr, mouseover ? 4 : 3);
+                }
                 if (!inBounds) continue;
 
-                renderCell(kv.value, r, tr);
+                renderCell(kv.value, r, tr, *lv);
             }
         }
     }
-    private void renderCell (TR, TTR)(FlexCell cell, TR renderer, TTR transform) {
+    import models.flexgrid.flexgeo;
+    import models.flexgrid.flexgeo.iteration;
+    import models.geometry.bounds;
+    import models.geometry.algorithms;
+    private struct GeometryRenderer (TR,TTR) {
+        TR renderer; TTR tr; bool drawRect = true;
+        void visit(scope FlexObject obj, AABB bounds, bool boundsHit, bool objectHit) {
+            writefln("%s", obj);
+            if (drawRect) {
+                renderer.draw(bounds, Colors.RED, tr, boundsHit ? 5 : 2);
+            }
+        }
+        void visit( scope Prim prim, AABB bounds, bool boundsHit, bool primHit ) {
+            if (drawRect) {
+                renderer.draw(bounds, Colors.ORANGE, tr, boundsHit ? 3 : 1);
+            }
+        }
+    }
+    struct DummyQuery {
+        bool matches (AABB bounds) { writefln("hi"); return true; }
+        bool matches (Prim prim) { writefln("hi"); return true; }
+    }
+
+    private void renderCell (TR, TTR, TLayerView)(FlexCell cell, TR renderer, TTR transform, ref TLayerView layerView) {
         auto viewBounds = view;
+        if (!viewBounds.contains(cell.bounds)) return;
+
+        auto r = GeometryRenderer!(TR,TTR)(renderer, transform);
+        // auto q = models.flexgrid.flexgeo.iteration.withinRadiusOf(transform.cursorPos, transform.cursorRadius);
+        auto q = DummyQuery();
+        bool shouldCheckMouseover = cell.bounds.withinRadiusOf(transform.cursorPos, transform.cursorRadius);
+
         foreach (kv; cell.geoBounds.byKeyValue) {
             auto bounds = kv.value;
             if (!viewBounds.contains(bounds)) continue;
-            renderer.draw(bounds, Colors.GREEN, transform, 1);
-            // TODO: render FlexGeo geometry (cell.geo[kv.key]) once a FlexGeo renderer exists
+            import models.geometry.algorithms: withinRadiusOf;
+            bool mouseover = shouldCheckMouseover&& bounds.withinRadiusOf(transform.cursorPos, transform.cursorRadius);
+            // bool mouseover = bounds.contains(transform.cursorPos);
+            renderer.draw(bounds, mouseover? Colors.ORANGE : Colors.GREEN, transform, 1);
+            auto geometry = kv.key in cell.geo;
+            if (geometry) {
+                models.flexgrid.flexgeo.iteration.visitMatchingAll(q, *geometry, r);
+            }
         }
+        auto pointsWithinRadius = Scalar!Meters(3000);
+        enum zoomLevelCutoff = 0.15;
+
+        if (transform.zoomLevel >= zoomLevelCutoff) return;
+        // shouldCheckMouseover = cell.bounds.withinRadiusOf(transform.cursorPos, transform.cursorRadius);
+        // if (!shouldCheckMouseover) return;
+
         foreach (kv; cell.points.byKeyValue) {
             auto pt = kv.value;
             if (!viewBounds.contains(pt)) continue;
-            renderer.draw(pt, Colors.RED, 3.0f, transform);
+
+            bool mouseover = shouldCheckMouseover &&
+                pt.withinRadiusOf(transform.cursorPos, transform.cursorRadius);
+            // if (pt.withinRadiusOf(transform.cursorPos, pointsWithinRadius)) {
+            renderer.draw(pt, mouseover ? Colors.PURPLE : Colors.RED, mouseover ? 6.0f : 3.0f, transform);
+            // }
         }
     }
 }
-// interface ITextWriter { void write (const(char)[]); }
-// struct ChunkedTextWriter {
-//     enum SIZE = 16 * 1024 * 1024;
-//     struct Blk { void* ptr; size_t length; }
-//     Blk[] blks;
-//     size_t head = 0;
-//     size_t flushHead = 0;
-//     this(this) = delete;
-//     ~this(){
-//         foreach (blk; blks) { free(blk); }
-//         this.blks.length = 0;
-//         this.head = 0;
-//     }
-//     void reset() { this.head = 0; this.flushHead = 0; }
-//     private Blk getBlk (size_t sz) {
-//         if (!head || blks[head].length + sz >= SIZE) {
-//             auto ptr = malloc(SIZE);
-//             memset(ptr, 0, SIZE);
-//             blks ~= Blk(ptr, min(sz, SIZE));
-//             ++head;
-//             return Blk(ptr, min(sz, SIZE));
-//         } else {
-//             auto blk = blks[head];
-//             auto start = blk.length;
-//             auto end = min(start + sz, SIZE);
-//             auto bytesToWrite = end - start;
-//             blks[head].length = end;
-//             return Blk(blk.ptr, bytesToWrite);
-//         }
-//     }
-//     void flushWritesTo(void delegate(const(char)[]) sink) {
-//         size_t fhead = flushHead;
-//         size_t currentHead = head * SIZE + (head ? blks[head].length : 0);
-//         if (currentHead == flushHead) return;
-//         this.flushHead = currentHead;
-//         size_t currentBlkHead = flushHead / SIZE;
-//         size_t blkOffset = flushHead % SIZE;
-//         if (currentBlkHead < head && blkOffset) {
-//             auto blk = blks[currentBlkHead];
-//             sink(blk.ptr[blkOffset .. blk.length]);
-//             while (++currentBlkHead < head) {
-//                 blk = blks[currentBlkHead];
-//                 sink(blk.ptr[0 .. blk.length]);
-//             }
-//             blk = blks[currentBlkHead];
-//             if (blk.length) {
-//                 sink(blk.ptr[0 .. blk.length]);
-//             }
-//         } else {
-//             auto blk = blks[currentBlkHead];
-//             if (blkOffset < blk.length) {
-//                 sink(blk.ptr[blkOffset .. blk.length]);
-//             }
-//         }
-//     }
-//     void put (C)(C c) if (isSomeChar!C) {
-//         auto blk = getBlk(C.sizeof);
-//         assert(blk.length == C.sizeof);
-//         static if (C.sizeof == 1) {
-//             *(cast(C*)blk.ptr) = c;
-//         } else static if (C.sizeof == 2) {
-//             *(cast(C*)blk.ptr) = c;
-//         } else static if (C.sizeof == 4) {
-//             *(cast(C*)blk.ptr) = c;
-//         } else {
-//             memcpy(blk.ptr, &c, blk.length);
-//         }
-//     }
-//     void put(C)(const(C)[] r) if (isSomeChar!C) {
-//         do {
-//             auto blk = getBlk(r.length);
-//             assert(blk.length && blk.length <= r.length);
-//             memcpy(blk.ptr, r.ptr, blk.length);
-//             r = r[blk.length..$];
-//         } while(r.length);
-//     }
-// }
-// struct BasicCachedTextWriter {
-//     ITextWriter l;
-//     ChunkedTextWriter w;
-//     void flush () { w.flushWritesTo(&(l.write)); w.reset(); }
-//     void textf (string msg) { w.put(msg); w.put('\n'); w.flushWritesTo(&(l.write)); }
-//     void textf (TArgs...)(string fmt, TArgs args) {
-//         formattedWrite(w, fmt, args); w.put('\n'); w.flushWritesTo(&(l.write));
-//     }
-// }
-// class TextLogger {
-//     public BasicCachedTextWriter w;
-//     public alias w this;
-//     this (ITextWriter w) { this.w = BasicCachedTextWriter(w); }
-// }
-// struct CameraController {
-//     Viewer viewer;
-//     TextLogger logger;
-//     alias TextLogger this;
-
-//     void update ()
-//         in { assert(viewer && logger); }
-//         do {
-//             textf("view bounds: %s", viewBounds);
-//             textf("view size:   %s", viewBounds.size);
-
-//             float dt = GetFrameTime();
-//             textf("dt: %s", dt);
-//             textf("FPS: %s", 1/dt);
-
-//             // handle mouse dragging
-//             bool startDrag = false; // ignore 1st frame of mouse drag
-//             if (!draggingView && IsMouseButtonDown(0)) {
-//                 draggingView = true;
-//                 startDrag = true;
-//             } else if (draggingView && !IsMouseButtonDown(0)) {
-//                 draggingView = false;
-//             }
-//             float scroll = GetMouseWheelMove();
-//             textf("scroll: %s", 100 * scroll * dt);
-
-//             auto wsz = Vector2(GetScreenWidth(), GetScreenHeight());
-//             auto mp = GetMousePosition();
-//             auto mr = Vector2( mp.x / wsz.x, 1 - mp.y / wsz.y );
-//             textf("mouse (pixel): %s", mp);
-//             textf("mouse (rel):   %s", mr);
-
-//             double zoomRel = 0;
-//             if (scroll) {
-//                 // adjust view size: bigger or smaller
-//                 enum SCROLL_SENSITIVITY = 5.0;
-//                 enum USE_DT = true;
-//                 auto clampedDt = min(dt, 1/30);
-//                 double scrollInput = cast(double)scroll * dt * SCROLL_SENSITIVITY;
-//                 // this.zoomLevel += scrollInput;
-//                 zoomRel = scrollInput;
-
-//                 writefln("raw input %s => input %s => scale %s => zoom %s",
-//                     scroll, scrollInput, (1.0 - scrollInput) * 100, zoomLevel);
-
-//             }
-//             updateView(draggingView && !startDrag, zoomRel);
-//         }
-// }

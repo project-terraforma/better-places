@@ -25,10 +25,15 @@ alias MultiPolygon = Geometry.MultiPolygon;
 
 void main(string[] args) {
     auto exeDir = args[0].dirName;
+    string dataset = "santa_cruz";
+    if (args.length > 1) {
+        dataset = args[1];
+    }
+
     scope grid = new FlexGrid();
     scope viewer = new Viewer(grid);
     scope mapview = new MapView(exeDir, grid, viewer);
-    mapview.loadAsync();
+    mapview.loadAsync(dataset);
 
     // call this before using raylib
     validateRaylibBinding();
@@ -39,7 +44,6 @@ void main(string[] args) {
         BeginDrawing();
         ClearBackground(Colors.RAYWHITE);
         mapview.render();
-        // DrawText("Hello, World!", 400, 300, 28, Colors.BLACK);
         EndDrawing();
     }
     CloseWindow();
@@ -48,6 +52,8 @@ void main(string[] args) {
 void loadMap (shared MapView v) { v.doLoadAsync(); }
 
 class MapView {
+    string datasetName;
+    string datasetPath;
     string exeDir;
     MapRenderer r;
     FlexGrid    grid;
@@ -55,6 +61,7 @@ class MapView {
     shared OmfDataset data;
     shared bool dataLoaded = false;
     shared bool dataLoading = false;
+    bool drawGridRects = true;
 public:
     Throwable dataLoadErr = null;
 
@@ -73,12 +80,39 @@ public:
     Point viewPos = Point(0, 0);
     Point viewVel = Point(0, 0);
 
+    struct LayerView {
+        bool visible = true;
+    }
+    LayerView[uint] layerViews;
+
     this (string exeDir, FlexGrid grid, Viewer gridViewer) {
         this.exeDir = exeDir;
         this.grid = grid;
         this.gridViewer = gridViewer;
         this.r = new MapRenderer();
         resetViewBounds();
+    }
+
+    void drawGui () {
+        import raygui;
+        auto showGridBackgroundLayer = grid.getOrCreateLayer("show-grid-background").id;
+        float x = 40, y = 30;
+        GuiPanel(Rectangle(x,y,500,200), "Hello, world!");
+        x += 5; y += 30;
+
+        foreach (layer; grid.layers.byValue) {
+            if (layer.id !in layerViews) {
+                layerViews[layer.id] = LayerView();
+            }
+            auto visible = layerViews[layer.id].visible;
+            auto r = Rectangle(x, y, 25, 25);
+            auto msg = "%s: %s\0".format(layer.name, layer.id);
+
+            auto selected = GuiCheckBox(r, msg.ptr, &visible);
+            layerViews[layer.id].visible = visible;
+            y += 35;
+        }
+        drawGridRects = layerViews[showGridBackgroundLayer].visible;
     }
 
     @property AABB viewPosLimits () const {
@@ -88,7 +122,8 @@ public:
         this.viewBounds = vb0.to!PolarNorm.scaledAroundCenter(0.4);
     }
 
-    void loadAsync(){
+    void loadAsync(string dataset){
+        this.datasetName = dataset;
         enforce(!dataLoading);
         dataLoading = true;
         // spawn((v) => v.doLoadAsync(), this);
@@ -105,7 +140,7 @@ public:
         }
         try {
             this.data = null;
-            MapLoader(exeDir).load(this, this.data);
+            MapLoader(exeDir).load(this, this.data, this.datasetName);
         } catch (Throwable e) {
             writefln("DATA LOAD ERROR: %s", e);
             *(cast(Throwable*)&this.dataLoadErr) = e;
@@ -127,6 +162,7 @@ public:
                 r.text("...map not loaded??");
             }
         }
+        drawGui();
     }
 
     void textf(TArgs...)(TArgs args) { r.textf(args); }
@@ -203,11 +239,12 @@ public:
         textf("FPS: %s", 1/dt);
 
         // handle mouse dragging
+        bool isDragDown = IsMouseButtonDown(0) || IsMouseButtonDown(2);
         bool startDrag = false; // ignore 1st frame of mouse drag
-        if (!draggingView && IsMouseButtonDown(0)) {
+        if (!draggingView && isDragDown) {
             draggingView = true;
             startDrag = true;
-        } else if (draggingView && !IsMouseButtonDown(0)) {
+        } else if (draggingView && !isDragDown) {
             draggingView = false;
         }
         float scroll = GetMouseWheelMove();
@@ -239,10 +276,22 @@ public:
 
 struct MapLoader {
     string exeDir;
-    void load (shared MapView view, ref shared OmfDataset outData, string dataPath = "data/omf/santa_cruz") {
+    void load (shared MapView view, ref shared OmfDataset outData, string datasetName = "santa_cruz") {
+        auto dataPath = "../data/omf".buildPath(datasetName);
+        writefln("using data path %s", dataPath);
         auto grid = (cast(MapView)view).grid;
+        auto bounds = dataPath.buildPath(".bounds.txt").readText;
+        writefln("use bounds '%s'", bounds);
+        auto bnds = bounds.strip().split(',').map!(x => x.to!double).array;
+        enforce(bnds.length == 4, "invalid data! %s".format(bounds));
+        view.vb0 = TAABB!PolarDeg(
+            TPoint!PolarDeg(bnds[0], bnds[1]),
+            TPoint!PolarDeg(bnds[2], bnds[3])
+        );
+        (cast(MapView)view).resetViewBounds();
+        writefln("set bounds for dataset %s: %s", dataPath, view.vb0);
 
-        auto dbPath = buildPath("..", "data", "flexgrid", "santa_cruz.db");
+        auto dbPath = buildPath("..", "data", "flexgrid", datasetName~".db");
         if (dbPath.exists) {
             writefln("loading from sqlite '%s'", dbPath);
             scope store = new FlexStore!FlexStoreSqlite3Storage(dbPath, grid);
@@ -297,12 +346,17 @@ class MapRenderer {
     bool loaded = false;
     int  textLayoutPosY = 0;
     int  fontSize = 24;
+    MapView.LayerView[uint] layerViews;
+    bool drawGridRects = false;
 
     void load () {
         if (loaded) return; loaded = true;
         // load fonts
         writefln("loading font");
-        this.font = LoadFontEx("fonts/JetBrainsMono/JetBrainsMono-Regular.ttf", fontSize, null, 0);
+        this.font = LoadFontEx("fonts/JetBrainsMono/JetBrainsMono-Regular.ttf", 24, null, 250);
+        import raygui;
+        GuiSetFont(font);
+        GuiSetStyle(DEFAULT, TEXT_SIZE, 24);
         // this.font = LoadFont("fonts/JetBrainsMono-Regular.ttf");
         writefln(" => %s", this.font);
     }
@@ -344,6 +398,15 @@ class MapRenderer {
         float precalcZoomCircleRadius;
         Vector2 cursorPosScreenSpace;
         float precalcZoomCircleRad2;
+
+        float cursorRadiusPixels = 15;
+
+        import models.geometry.units;
+        @property Scalar!Meters cursorRadius () const {
+            return Scalar!PolarNorm(
+                cursorRadiusPixels / mapToScreenScale.x
+            ).to!Meters;
+        }
 
         this (const MapView view) {
             this.viewBounds = view.viewBounds;
@@ -396,6 +459,8 @@ class MapRenderer {
         }
     }
     void render (MapView view, Viewer gridViewer) {
+        this.layerViews = view.layerViews;
+        this.drawGridRects = view.drawGridRects;
         auto tr = ViewTransform(view);
         gridViewer.render(this, tr);
     }

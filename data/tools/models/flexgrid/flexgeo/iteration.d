@@ -3,6 +3,7 @@ import models.flexgrid.flexgeo.data;
 import models.geometry;
 import models.geometry.algorithms;
 import models.flexgrid.grid;
+import std;
 
 bool contains (AABB bounds, Point[] points) {
     foreach (pt; points) if (models.geometry.algorithms.contains(bounds, pt)) return true;
@@ -20,11 +21,21 @@ struct ContainingBounds {
     bool matches (AABB rect) { return models.geometry.algorithms.contains(rect, bounds); }
     bool matches (Prim prim) { return prim.contains(bounds); }
 }
+auto containingBounds (AABB bounds) { return ContainingBounds(bounds); }
+auto withinRadiusOf (TRadius = Scalar!Meters)(Point point, TRadius radius) {
+    return WithinRadiusOf!TRadius(point, radius);
+}
 struct WithinRadiusOf (TRadius = Scalar!Meters) {
     Point   point;
     TRadius radius;
-    bool matches (AABB rect) { return rect.withinRadiusOf(point, radius); }
-    bool matches (Prim prim) { return prim.withinRadiusOf(point, radius); }
+    bool matches (AABB rect) {
+        writefln("check radius");
+    return models.geometry.algorithms.withinRadiusOf(rect, point, radius); }
+    bool matches (Prim prim) {
+        foreach (pt; prim.points)
+            if (models.geometry.algorithms.withinRadiusOf(pt, point, radius)) return true;
+        return false;
+    }
 }
 private bool matchesAnyPolygon (TQuery)(TQuery query, const(Entity)[] ents, ref const(Point)[] points) {
     const(Point)[] bounds = null;
@@ -237,10 +248,10 @@ bool matchesAny (TQuery)(TQuery query, ref const(FlexGeo) g) {
     );
 }
 bool visitMatchingAny (TQuery,TVisitor)(TQuery query, ref const(FlexGeo) g, TVisitor v) {
-    return matchVisitImpl!(TQuery, MatchType.VisitAnyMatching, v);
+    return false; // TODO: matchVisitImpl has known bugs (see ISSUES.md), stubbed
 }
 bool visitMatchingAll (TQuery,TVisitor)(TQuery query, ref const(FlexGeo) g, TVisitor v) {
-    return matchVisitImpl!(TQuery, MatchType.VisitAnyMatching, v);
+    return false; // TODO: matchVisitImpl has known bugs (see ISSUES.md), stubbed
 }
 
 struct VisitBoth {

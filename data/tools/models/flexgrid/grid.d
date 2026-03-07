@@ -216,22 +216,21 @@ public:
         getOrCreateCell(key, layer).load(data);
     }
 
+    uint createNewLayer (string layerName) {
+        if (layerName in layersByName) return layersByName[layerName];
+        auto newLayer = nextLayerId++;
+        while (newLayer in layers) {
+            newLayer = nextLayerId++;
+        }
+        layers[newLayer] = Layer(newLayer, layerName);
+        layersByName[layerName] = newLayer;
+        return newLayer;
+    }
+
     ref Layer getOrCreateLayer(string layerName) {
         auto layerId = layerName in layersByName;
-        if (!layerId) {
-            auto newLayer = nextLayerId++;
-            layersByName[layerName] = newLayer;
-            assert(newLayer !in layers, "duplicate %s: '%s', '%s'"
-                .format(newLayer, layers[newLayer].name, layerName));
-            layerId = layerName in layersByName;
-            assert(layerId !is null);
-        }
-        auto layerPtr = *layerId in layers;
-        if (layerPtr is null) {
-            return layers[*layerId] = Layer(*layerId, layerName);
-        } else {
-            return *layerPtr;
-        }
+        if (layerId !is null) return layers[*layerId];
+        return layers[createNewLayer(layerName)];
     }
     FlexCell getOrCreateCell(FlexCellKey key, uint layer) {
         auto l = layer in this.layers;
