@@ -227,6 +227,13 @@ public:
         return newLayer;
     }
 
+    Layer* tryGetLayer(uint layer) {
+        return layer in this.layers;
+    }
+    Layer* tryGetLayer(string layerName) {
+        auto layerId = layerName in layersByName;
+        return layerId ? tryGetLayer(*layerId) : null;
+    }
     ref Layer getOrCreateLayer(string layerName) {
         auto layerId = layerName in layersByName;
         if (layerId !is null) return layers[*layerId];

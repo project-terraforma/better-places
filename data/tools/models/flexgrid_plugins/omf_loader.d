@@ -1,4 +1,4 @@
-// module models.flexgrid_plugins.omf_loader;
+module models.flexgrid_plugins.omf_loader;
 // import models.flexgrid;
 // import models.omf;
 // import std;
