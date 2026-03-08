@@ -123,10 +123,14 @@ class Viewer {
             import models.geometry.algorithms: withinRadiusOf;
             bool mouseover = shouldCheckMouseover&& bounds.withinRadiusOf(transform.cursorPos, transform.cursorRadius);
             // bool mouseover = bounds.contains(transform.cursorPos);
-            renderer.draw(bounds, mouseover? Colors.ORANGE : Colors.GREEN, transform, 1);
+            renderer.draw(bounds, mouseover ? layerView.mouseoverColor : layerView.color, transform, 1);
             auto geometry = kv.key in cell.geo;
             if (geometry) {
                 models.flexgrid.flexgeo.iteration.visitMatchingAll(q, *geometry, r);
+            }
+            if (mouseover) {
+                auto geoType = geometry ? (*geometry).getType() : kv.key in cell.points ? GeoType.Point : GeoType.None;
+                renderer.view.mouseover(FlexCellId(cell, kv.key, geoType));
             }
         }
         auto pointsWithinRadius = Scalar!Meters(3000);
@@ -143,8 +147,12 @@ class Viewer {
             bool mouseover = shouldCheckMouseover &&
                 pt.withinRadiusOf(transform.cursorPos, transform.cursorRadius);
             // if (pt.withinRadiusOf(transform.cursorPos, pointsWithinRadius)) {
-            renderer.draw(pt, mouseover ? Colors.PURPLE : Colors.RED, mouseover ? 6.0f : 3.0f, transform);
+            renderer.draw(pt, mouseover ? layerView.mouseoverColor : layerView.color, mouseover ? 6.0f : 3.0f, transform);
             // }
+            //
+            if (mouseover) {
+                renderer.view.mouseover(FlexCellId(cell, kv.key, GeoType.Point));
+            }
         }
     }
 }

@@ -62,6 +62,8 @@ class MapView {
     shared bool dataLoaded = false;
     shared bool dataLoading = false;
     bool drawGridRects = true;
+    FlexCellId[] mouseoverIds;
+    FlexCellId[] selectedIds;
 public:
     Throwable dataLoadErr = null;
 
@@ -82,6 +84,8 @@ public:
 
     struct LayerView {
         bool visible = true;
+        Color color = Colors.GREEN;
+        Color mouseoverColor = Colors.BLACK;
     }
     LayerView[uint] layerViews;
 
@@ -91,13 +95,22 @@ public:
         this.gridViewer = gridViewer;
         this.r = new MapRenderer();
         resetViewBounds();
+        layerViews[grid.getOrCreateLayer("omf.address").id] = LayerView(true, Colors.ORANGE);
+        layerViews[grid.getOrCreateLayer("omf.building").id] = LayerView(true, Colors.PURPLE);
+        layerViews[grid.getOrCreateLayer("omf.place").id] = LayerView(true, Colors.RED);
     }
 
+    AABB[] guiRects;
+    Rectangle layoutGuiRect (float x, float y, float w, float h) {
+        guiRects ~= AABB(Point(x, y), Point(x+w, y+h));
+        return Rectangle(x, y, w, h);
+    }
     void drawGui () {
+        guiRects.length = 0;
         import raygui;
         auto showGridBackgroundLayer = grid.getOrCreateLayer("show-grid-background").id;
         float x = 40, y = 30;
-        GuiPanel(Rectangle(x,y,500,200), "Hello, world!");
+        GuiPanel(layoutGuiRect(x,y,500,200), "layers");
         x += 5; y += 30;
 
         foreach (layer; grid.layers.byValue) {
@@ -113,6 +126,35 @@ public:
             y += 35;
         }
         drawGridRects = layerViews[showGridBackgroundLayer].visible;
+
+        y += 40; auto y0 = y; auto panelWidth = 300;
+        if (selectedIds.length) {
+            GuiPanel(layoutGuiRect(x,y,panelWidth,1000), "selected");
+            foreach (id; selectedIds) {
+                y += 30;
+                auto layerName = grid.layers[id.cell.layer].name;
+                GuiLabel(Rectangle(x,y,panelWidth, 30), "%s %s\0".format(id.geoType, layerName).ptr);
+            }
+        }
+        if (selectedIds.length) {
+             y = y0; x += panelWidth + 20;
+        }
+        if (mouseoverIds.length) {
+            GuiPanel(layoutGuiRect(x,y,500,400), "mouseover");
+            foreach (id; mouseoverIds) {
+                y += 30;
+                auto layerName = grid.layers[id.cell.layer].name;
+                GuiLabel(Rectangle(x,y,panelWidth, 30), "%s %s\0".format(id.geoType, layerName).ptr);
+            }
+        }
+    }
+    bool isMouseInUI() {
+        auto mouseXY = GetMousePosition();
+        auto mp = Point(mouseXY.x, mouseXY.y);
+        foreach (rect; guiRects) {
+            if (rect.contains(mp)) return true;
+        }
+        return false;
     }
 
     @property AABB viewPosLimits () const {
@@ -146,7 +188,17 @@ public:
             *(cast(Throwable*)&this.dataLoadErr) = e;
         }
     }
+    private void updateMouseover() {
+        scope(exit) mouseoverIds.length = 0;
+        if (IsMouseButtonPressed(0) && !isMouseInUI) {
+            selectedIds = mouseoverIds;
+        }
+    }
+    void mouseover (FlexCellId id) {
+        mouseoverIds ~= id;
+    }
     void render () {
+        updateMouseover();
         r.newFrame();
         update();
         if (dataLoaded) {
@@ -203,7 +255,7 @@ public:
         }
         if (dragView) {
             auto mouseScreenDelta = GetMouseDelta();
-            auto mouseNormDelta = Point( mouseScreenDelta.x / w, mouseScreenDelta.y / h );
+            auto mouseNormDelta = Point( mouseScreenDelta.x / w, -mouseScreenDelta.y / h );
             auto mouseDeltaWorld = Point(
                 -mouseNormDelta.x * viewSpanWorld.x,
                 -mouseNormDelta.y * viewSpanWorld.y
@@ -348,6 +400,7 @@ class MapRenderer {
     int  fontSize = 24;
     MapView.LayerView[uint] layerViews;
     bool drawGridRects = false;
+    MapView view;
 
     void load () {
         if (loaded) return; loaded = true;
@@ -398,6 +451,7 @@ class MapRenderer {
         float precalcZoomCircleRadius;
         Vector2 cursorPosScreenSpace;
         float precalcZoomCircleRad2;
+        Vector2 screenSize;
 
         float cursorRadiusPixels = 15;
 
@@ -411,6 +465,7 @@ class MapRenderer {
         this (const MapView view) {
             this.viewBounds = view.viewBounds;
             auto screenSize = Point(GetScreenWidth(), GetScreenHeight());
+            this.screenSize = Vector2(screenSize.x, screenSize.y);
             auto viewSize = Point(
                 viewBounds.maxv.x - viewBounds.minv.x,
                 viewBounds.maxv.y - viewBounds.minv.y
@@ -430,6 +485,7 @@ class MapRenderer {
             this.precalcZoomCircleRad2 = precalcZoomCircleRadius * precalcZoomCircleRadius;
         }
         Point transformScreenToGeoSpace (Vector2 p) {
+            p.y = screenSize.y - p.y;
             return Point(
                 (p.x / mapToScreenScale.x) + mapToScreenOffset.x,
                 (p.y / mapToScreenScale.y) + mapToScreenOffset.y
@@ -441,6 +497,7 @@ class MapRenderer {
             p.y -= mapToScreenOffset.y;
             p.x *= mapToScreenScale.x;
             p.y *= mapToScreenScale.y;
+            p.y = screenSize.y - p.y;
             return Vector2(p.x, p.y);
         }
 
@@ -459,6 +516,7 @@ class MapRenderer {
         }
     }
     void render (MapView view, Viewer gridViewer) {
+        this.view = view;
         this.layerViews = view.layerViews;
         this.drawGridRects = view.drawGridRects;
         auto tr = ViewTransform(view);
