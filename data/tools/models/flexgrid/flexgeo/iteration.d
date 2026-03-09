@@ -5,15 +5,120 @@ import models.geometry.algorithms;
 import models.flexgrid.grid;
 import std;
 
+// iterates exclusively over primitive geometry types
+struct GeoPrimIterator {
+private:
+    FlexGeo geo;
+    size_t i = 0, gi = 0, n;
+    long id = -1;
+    Point* bounds = null;
+public:
+    this (FlexGeo g) {
+        this.geo = g;
+        this.n = g.entities.length;
+        skipToNextPrim();
+    }
+    private void skipToNextPrim() {
+        id = -1; bounds = null;
+        for (; i < n; ++i) {
+            auto t = geo.entities[i].type;
+            if (t <= GeoType.Bounds) {
+                switch (t) {
+                    case GeoType.Bounds: bounds = geo.points.ptr + gi; gi += 2; break;
+                    case GeoType.Id: id = cast(long)geo.entities[i].payload; break;
+                    default:
+                }
+            } else {
+                if (t >= GeoType.Polygon) {
+                    // applies to a container object so ignore
+                    id = -1; bounds = null;
+                } else {
+                    // RingOuter, RingInner, Points, Point
+                    break;
+                }
+            }
+        }
+    }
+    void popFront ()
+        in { assert(!empty); assert(geo.entities[i].metaType == GeoMetaType.Geometry); }
+        do { gi += geo.entities[i].payload; ++i; skipToNextPrim(); }
+    bool empty () const { return i >= n; }
+    TaggedPrim front () {
+        auto entity = geo.entities[i];
+        assert(entity.payload > 0, "zero length payload for entity %s (%s) in geometry\n\t%s\n\t%s"
+            .format(entity.type, entity.payload, geo.points, geo.entities)
+        );
+        return TaggedPrim(
+            entity.type,
+            geo.points[gi .. gi + entity.payload],
+            bounds,
+            id);
+    }
+    auto save () { return this; }
+}
+GeoPrimIterator allGeoPrims (FlexGeo g) {
+    return GeoPrimIterator(g);
+}
+
+bool rectContainsPoint (U)(TAABB!U rect, TPoint!U point) {
+    return models.geometry.algorithms.contains(rect, point);
+}
+bool ringContainsPoint(U)(TPoint!U[] ringPoints, TPoint!U point) {
+    return models.geometry.algorithms.contains(TRing!U(ringPoints), point);
+}
+alias pointWithinRadiusOf = models.geometry.algorithms.withinRadiusOf;
+
+bool containsOrNearPoint (U=Meters)(FlexGeo g, Point p, TScalar!U nearPointOrLineThreshold) {
+    bool containedInOuterRing = false;
+    // rings: true iff hits outer ring AND NOT inner ring
+    foreach (prim; GeoPrimIterator(g)) {
+        switch (prim.type) {
+            case GeoType.RingOuter:
+                // any outer ring hit = can skip other outer rings, but need to check if any inner ring hit
+                if (containedInOuterRing) continue;
+                if (!prim.hasBounds || prim.bounds.rectContainsPoint(p)) {
+                    containedInOuterRing = ringContainsPoint(prim.points, p);
+                }
+                break;
+            case GeoType.RingInner:
+                // any inner ring hit = false
+                if (!prim.hasBounds || prim.bounds.rectContainsPoint(p)) {
+                    if (ringContainsPoint(prim.points, p)) {
+                        return false;
+                    }
+                }
+                break;
+            case GeoType.Line:
+                if (!prim.hasBounds || prim.bounds.rectContainsPoint(p)) {
+                    assert(false, "TODO!");
+                }
+                break;
+            case GeoType.Point:
+                foreach (point; prim.points) {
+                    if (pointWithinRadiusOf(p, point, nearPointOrLineThreshold)) {
+                        return true;
+                    }
+                }
+                break;
+            default: assert(0);
+        }
+    }
+    return containedInOuterRing;
+}
+
+
+
+
 bool contains (AABB bounds, Point[] points) {
     foreach (pt; points) if (models.geometry.algorithms.contains(bounds, pt)) return true;
     return false;
 }
 bool contains (Prim prim, AABB bounds) {
-    final switch (prim.type) {
-        case PrimType.RingPoints: return bounds.contains(prim.points);
-        case PrimType.LinePoints: return bounds.contains(prim.points);
-        case PrimType.PointCloudPoints: return bounds.contains(prim.points);
+    switch (prim.type) {
+        case GeoType.RingOuter: case GeoType.RingInner: return bounds.contains(prim.points);
+        case GeoType.Points: return bounds.contains(prim.points);
+        case GeoType.Point: return bounds.contains(prim.points);
+        default: assert(false, "invalid primitive for .contains(): %s".format(prim)); assert(0);
     }
 }
 struct ContainingBounds {
@@ -22,9 +127,9 @@ struct ContainingBounds {
     bool matches (Prim prim) { return prim.contains(bounds); }
 }
 auto containingBounds (AABB bounds) { return ContainingBounds(bounds); }
-auto withinRadiusOf (TRadius = Scalar!Meters)(Point point, TRadius radius) {
-    return WithinRadiusOf!TRadius(point, radius);
-}
+// auto withinRadiusOf (TRadius = Scalar!Meters)(Point point, TRadius radius) {
+//     return WithinRadiusOf!TRadius(point, radius);
+// }
 struct WithinRadiusOf (TRadius = Scalar!Meters) {
     Point   point;
     TRadius radius;

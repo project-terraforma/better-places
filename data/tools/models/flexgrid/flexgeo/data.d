@@ -27,29 +27,49 @@ enum GeoType : ubyte {
     Line        = 0xD,
     PointCloud  = 0xE,
 }
-
+enum GeoMetaType : ubyte {
+    Tag = 0, Metadata = 1, Geometry = 2, Structural = 3
+}
+GeoMetaType metaType (GeoType t) { return cast(GeoMetaType)((cast(size_t)t) >> 2); }
+GeoMetaType metaType (Entity e) { return e.type.metaType; }
 
 bool isData      (GeoType g) { return g >= GeoType.RingOuter && g <= GeoType.Point; }
 bool isContainer (GeoType g) { return g >= GeoType.Polygon; }
 
 enum PrimType { RingPoints, LinePoints, PointCloudPoints }
+
+PrimType primType (GeoType type) {
+    switch (type) {
+        case GeoType.RingOuter: case GeoType.RingInner: return PrimType.RingPoints;
+        case GeoType.Points: return PrimType.LinePoints;
+        case GeoType.Point: return PrimType.PointCloudPoints;
+        default: assert(false, "invalid type %s".format(type)); assert(0);
+    }
+}
+
 struct Prim {
-    PrimType type;
     Point[] points;
+    GeoType  type;
 }
 struct TaggedPrim {
+    private Point* _bounds = null;
+    private long _index = -1;
     Prim prim; alias prim this;
-    long _index = -1;
-    long _tag = -1;
-    FlexGeo* geo;
-    FlexCell cell;
 
+    this (GeoType geoType, Point[] points, Point* optBounds, long optId) {
+        this.prim = Prim(points, geoType);
+        this._bounds = optBounds;
+        this._index = optId;
+    }
     @property bool hasId () { return _index >= 0; }
     @property auto id ()
-        in { assert(hasId); assert(cell); }
-        do { return cell.getId(cast(uint)_index); }
-    // @property auto id () { return _index >= 0 && cell !is null ? cell.getId(cast(uint)_index) : null; }
-    // @property string* tag () { return _tag >= 0 && geo !is null ? geo.getTag(cast(uint)_tag) : null; }
+        in { assert(hasId); }
+        do { return cast(uint)_index; }
+
+    @property bool hasBounds () { return _bounds !is null; }
+    @property AABB bounds ()
+        in { assert(hasBounds); }
+        do { return AABB(_bounds[0], _bounds[1]); }
 }
 
 struct Entity {
@@ -65,6 +85,10 @@ struct Entity {
     this (GeoType t, uint n = 0) {
         this.type = t;
         this.payload = n;
+    }
+    void toString (scope void delegate(scope const(char)[]) sink) {
+        char[512] buf;
+        sink(buf.sformat("Entity.%s(%s)", type, payload));
     }
 }
 struct FlexGeo {

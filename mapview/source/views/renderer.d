@@ -69,14 +69,14 @@ class Renderer {
     //     //     tr.transform(p), 3, 10, 0, color
     //     // );
     // }
-    void drawLine(Point a, Point b, Color color) {
+    void drawLine(Point a, Point b, Color color, float lineThickness) {
         auto p1 = tr.transform(a), p2 = tr.transform(b);
         DrawLineV(p1, p2, color);
     }
-    void drawRing (const Ring ring, Color color) {
+    void drawRing (const Ring ring, Color color, float lineThickness = 1) {
         size_t n = ring.points.length;
         for (size_t i = 1; i < n; ++i) {
-            drawLine(ring.points[i-1], ring.points[i], color);
+            drawLine(ring.points[i-1], ring.points[i], color, lineThickness);
         }
     }
     void draw (AABB r, Color color, float lineThickness = 1) {

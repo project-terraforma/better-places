@@ -134,13 +134,30 @@ private:
             bool mouseover = shouldCheckMouseover&& bounds.withinRadiusOf(transform.cursorPos, transform.cursorRadius);
             // bool mouseover = bounds.contains(transform.cursorPos);
             //
+            auto color = mouseover ? mouseoverColor : defaultColor;
             if (drawGeoBounds) {
-                auto color = mouseover ? mouseoverColor : defaultColor;
                 r.draw(bounds, color, 1);
             }
             auto geometry = kv.key in cell.geo;
+
             if (geometry) {
                 // models.flexgrid.flexgeo.iteration.visitMatchingAll(q, *geometry, r);
+                bool hasMouseoverOuterRing = false;
+                auto lineThickness = 1.0;
+                if (mouseover) { // mouseover bounds
+                    mouseover = (*geometry).containsOrNearPoint!PolarNorm(r.tr.cursorPos, Scalar!PolarNorm(0.0));
+                    if (mouseover) lineThickness = 2.0;
+                }
+                foreach (prim; allGeoPrims(*geometry)) {
+                    switch (prim.type) {
+                        case GeoType.RingOuter: case GeoType.RingInner:
+                            r.drawRing(Ring(prim.points), color, lineThickness);
+                            break;
+                        case GeoType.Points: /* TODO */ assert(false, "TODO"); break;
+                        case GeoType.Point: assert(false, "TODO"); break;
+                        default: assert(false, "invalid %s".format(prim.type));
+                    }
+                }
             }
             if (mouseover) {
                 auto geoType = geometry ? (*geometry).getType() : kv.key in cell.points ? GeoType.Point : GeoType.None;

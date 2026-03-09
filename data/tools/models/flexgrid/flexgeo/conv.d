@@ -49,9 +49,9 @@ struct FlexGeoBuilder {
     void annotateId(uint id) { g.entities ~= Entity(GeoType.Id, id); }
     void annotateTag(string tag) { g.entities ~= Entity(GeoType.Tag, g.newTag(tag)); }
 
-    void begin (GeoType t, bool addBounds) {
+    void begin (GeoType t, uint count, bool addBounds) {
         uint bounds = addBounds ? createBounds() : uint.max;
-        g.entities ~= Entity(t);
+        g.entities ~= Entity(t, count);
         auto ent = g.entities.length - 1;
         stack ~= EntityBuildInfo(cast(uint)ent, bounds);
     }
@@ -90,7 +90,7 @@ struct FlexGeoBuilder {
             assert(p.polygons.length > 0);
             add(p.polygons[0], addBounds, addChildBounds);
         } else {
-            begin(GeoType.Polygon, addBounds);
+            begin(GeoType.Polygon, cast(uint)p.polygons.length, addBounds);
             foreach (poly; p.polygons) {
                 add(poly, true, addChildBounds);
             }
@@ -98,13 +98,13 @@ struct FlexGeoBuilder {
         }
     }
     void add (U)(TPolygon!U p, bool addBounds, bool addChildBounds = true) {
-        begin(GeoType.Polygon, addBounds);
+        begin(GeoType.Polygon, cast(uint)p.rings.length, addBounds);
         foreach (i, ring; p.rings) {
             assert(ring.points.length >= 1);
             if (i == 0) {
-                begin(GeoType.RingOuter, addChildBounds);
+                begin(GeoType.RingOuter, cast(uint)ring.points.length, addChildBounds);
             } else {
-                begin(GeoType.RingInner, addChildBounds);
+                begin(GeoType.RingInner, cast(uint)ring.points.length, addChildBounds);
             }
             auto bounds = stack[$-1].bounds;
             foreach (k, point; ring.points) {
