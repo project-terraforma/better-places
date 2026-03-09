@@ -10,9 +10,7 @@ static struct PolarDeg {
     static auto to (Unit)(T value) {
         static if (is(Unit == This)) { return value; }
         else static if (is(Unit == PolarNorm)) {
-            value = fmod(value, 360.0);
-            if (value < 0.0) value += 360.0;
-            return cast(Unit.T)(value / 360.0);
+            return cast(Unit.T)(value / 360.0 + 0.5);
         }
         else static if (is(Unit == PolarRad)) {
             return cast(Unit.T)(
@@ -36,12 +34,12 @@ static struct PolarNorm {
         static if (is(Unit == This)) { return value; }
         else static if (is(Unit == PolarDeg)) {
             return cast(Unit.T)(
-                (value - 0.5) * 180.0
+                (value - 0.5) * 360.0
             );
         }
         else static if (is(Unit == PolarRad)) {
             return cast(Unit.T)(
-                (value - 0.5) * PI
+                (value - 0.5) * 2.0 * PI
             );
         }
 

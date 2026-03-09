@@ -237,7 +237,8 @@ public:
     ref Layer getOrCreateLayer(string layerName) {
         auto layerId = layerName in layersByName;
         if (layerId !is null) return layers[*layerId];
-        return layers[createNewLayer(layerName)];
+        auto newId = createNewLayer(layerName);
+        return layers[newId];
     }
     FlexCell getOrCreateCell(FlexCellKey key, uint layer) {
         auto l = layer in this.layers;
