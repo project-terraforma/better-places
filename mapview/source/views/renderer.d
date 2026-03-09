@@ -27,7 +27,7 @@ class Renderer {
     }
     void text (string msg) {
         textLayoutPosY += fontSize;
-        text(msg, 20, 20 + textLayoutPosY);
+        text(msg, 20 + 520, 20 + textLayoutPosY);
     }
     void text (string msg, int x, int y) {
         text(msg, x, y, Colors.BLACK);
@@ -88,9 +88,7 @@ class Renderer {
         DrawLineEx(b, Vector2(b.x, a.y), lineThickness, color);
     }
     void drawPoint(Point point, Color color, float r) {
-        float circRadius = r * tr.zoomBasedCirclePointRadius;
-        if (circRadius <= 0) return;
         Vector2 pt = tr.transform(point); // screenspace
-        DrawCircleV(pt, circRadius, color);
+        DrawCircleV(pt, r, color);
     }
 }

@@ -69,7 +69,17 @@ class ViewTransform {
     float zoomBasedCirclePointRadius () { return precalcZoomCircleRadius; }
     private float calcZoomCircleRadius(float zoomLevel) {
         // zoom goes from 2 (zoomed in) to -4 (zoomed out)
-        auto z = (zoomLevel + 2) * 0.25;
+        // 32.0 (div 1)   at zoom = 2
+        // 8.0  (div 4)   at zoom = 1
+        // 2.0  (div 4^2) at zoom = 0
+        // 0.5  (div 4^3) at zoom = 1
+        //
+        // auto z = max(1, (zoomLevel - 2.0));
+        // z = 1 / z;
+        // z = exp(z);
+        // return 32.0 / (z*z+1);
+        // return 32.0 /
+        auto z = (2 - zoomLevel) * 0.25;
         return z * z * 4;
     }
     bool mouseNearPoint(Vector2 screenSpacePoint) {

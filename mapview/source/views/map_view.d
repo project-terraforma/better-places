@@ -15,13 +15,15 @@ public:
     LayerViewFilter     layerFilters;
     EntityViewFilter    entityFilters;
 
-    bool                drawStrictGridCellBounds = true;
+    bool                drawStrictGridCellBounds = false;
     Color               drawStrictGridCellBoundsColor = Colors.BLUE;
 
-    bool                drawCellBounds = true;
+    bool                drawCellBounds = false;
     Color               drawCellBoundsColor = Colors.RED;
 
     bool                drawPoints = true;
+
+    bool                drawGeoBounds = true;
 
     enum GridCellBoundsCheck { UseCellBounds, UseGridBounds }
     enum gridCellBoundsCheck = GridCellBoundsCheck.UseCellBounds;
@@ -38,20 +40,23 @@ public:
         r.textf("render %s", view.to!PolarDeg);
         r.textf("    is %s", view);
 
-        drawStrictGridCellBounds = layerFilters.isVisible("show-grid-background");
         foreach (layer; grid.layers.byValue) {
-            r.textf("render layer %s '%s'", layer.id, layer.name);
+            // r.textf("render layer %s '%s'", layer.id, layer.name);
 
             if (!layerFilters.isVisible(layer.id)) {
-                r.textf("hidden layer %s", layer.name);
+                // r.textf("hidden layer %s", layer.name);
                 continue;
             } else {
-                r.textf("layer %s has %s cells", layer.name, layer.cells.length);
+                // r.textf("layer %s has %s cells", layer.name, layer.cells.length);
             }
             size_t i = 0;
+            auto layerView = layer.id in layerFilters.layerInfo;
+            if (!layerView) continue;
+
             foreach (kv; layer.cells.byKeyValue) {
                 auto cell = kv.value;
                 auto gridCellBounds = kv.key.bounds;
+                auto cellBounds = cell.bounds;
 
                 // r.textf("grid cell size: %s      %s     origin %s  view origin %s", gridCellBounds.size.to!Meters, cell.bounds.size.to!Meters
                 //             , cell.bounds.minv.to!PolarDeg, view.minv.to!PolarDeg
@@ -60,33 +65,45 @@ public:
                 //         , cell.bounds.minv.to!PolarDeg, view.minv.to!PolarDeg
                 // );
                 // if (++i >= 10) break;
-
-                if (drawStrictGridCellBounds) {
-                    r.drawRect(gridCellBounds, drawStrictGridCellBoundsColor);
-                }
-                if (drawCellBounds) {
-                    r.drawRect(cell.bounds, drawCellBoundsColor);
-                }
-
+                //
                 static if (gridCellBoundsCheck == GridCellBoundsCheck.UseGridBounds) {
                     bool inBounds = view.contains(gridCellBounds);
+                    // bool inGridBounds = inBounds;
+                    // bool inCellBounds = drawCellBounds ? view.contains(cellBounds) : false;
                 } else {
-                    bool inBounds = view.contains(cell.bounds);
+                    bool inBounds = view.contains(cellBounds);
+                    // bool inCellBounds = inBounds;
+                    // bool inGridBounds = drawStrictGridCellBounds ? view.contains(gridCellBounds) : false;
                 }
                 if (inBounds) {
-                    writefln("cell %s is in bounds", kv.key);
+                    // writefln("cell %s is in bounds", kv.key);
                 } else {
                     // writefln("%s not in bounds %s", view, gridCellBounds);
                 }
                 if (!inBounds) continue;
 
-
-                drawCell(layer.id, cell, r, c);
+                if (drawStrictGridCellBounds) {
+                    bool mouseover = gridCellBounds.contains(r.tr.cursorPos);
+                    r.drawRect(gridCellBounds, drawStrictGridCellBoundsColor, mouseover ? 4 : 1);
+                    if (mouseover) {
+                        auto k = kv.key;
+                        r.textf("mouse over (strict grid) bounds for cell (%s,%s,%s, layer=%s)", k.level, k.x, k.y, layer.name);
+                    }
+                }
+                if (drawCellBounds) {
+                    bool mouseover = cellBounds.contains(r.tr.cursorPos);
+                    r.drawRect(cellBounds, drawCellBoundsColor, mouseover ? 4 : 1);
+                    if (mouseover) {
+                        auto k = kv.key;
+                        r.textf("mouse over (cell actual) bounds for cell (%s,%s,%s, layer=%s)", k.level, k.x, k.y, layer.name);
+                    }
+                }
+                drawCell(layer.id, cell, r, c, *layerView);
             }
         }
     }
 private:
-    void drawCell (uint layer, FlexCell cell, Renderer r, MapViewController c) {
+    void drawCell (uint layer, FlexCell cell, Renderer r, MapViewController c, LayerViewInfo layerView) {
         auto viewBounds = view;
         if (!viewBounds.contains(cell.bounds)) return;
 
@@ -96,17 +113,31 @@ private:
         // auto q = DummyQuery();
         bool shouldCheckMouseover = cell.bounds.withinRadiusOf(transform.cursorPos, transform.cursorRadius);
 
-        auto defaultColor = layerFilters.getColor(layer, false);
-        auto mouseoverColor = layerFilters.getColor(layer, true);
+        auto defaultColor   = layerView.color;// layerFilters.getColor(layer, false);
+        auto mouseoverColor = layerView.mouseoverColor;// layerFilters.getColor(layer, true);
+
+        enum minGeometryPixelSizeToRender = 5;
+        auto minPixelSizeFilterWorldSpace = r.tr.mapToScreenScale.x;
 
         foreach (kv; cell.geoBounds.byKeyValue) {
             auto bounds = kv.value;
+
+            // filter out geometry too small to render (<= 1px)
+            auto sz = bounds.size;
+            auto maxVisibleWorld = max(sz.x, sz.y);
+            // if (r.tr.mapToScreenScale.x * maxVisibleWorld <= 1)
+            // if (r.tr.mapToScreenScale.x <= sz.x * 4) continue;
+            if (minPixelSizeFilterWorldSpace * maxVisibleWorld <= minGeometryPixelSizeToRender) continue;
+
             if (!viewBounds.contains(bounds)) continue;
             import models.geometry.algorithms: withinRadiusOf;
             bool mouseover = shouldCheckMouseover&& bounds.withinRadiusOf(transform.cursorPos, transform.cursorRadius);
             // bool mouseover = bounds.contains(transform.cursorPos);
-            auto color = mouseover ? defaultColor : mouseoverColor;
-            r.draw(bounds, color, 1);
+            //
+            if (drawGeoBounds) {
+                auto color = mouseover ? mouseoverColor : defaultColor;
+                r.draw(bounds, color, 1);
+            }
             auto geometry = kv.key in cell.geo;
             if (geometry) {
                 // models.flexgrid.flexgeo.iteration.visitMatchingAll(q, *geometry, r);
@@ -124,7 +155,14 @@ private:
         // shouldCheckMouseover = cell.bounds.withinRadiusOf(transform.cursorPos, transform.cursorRadius);
         // if (!shouldCheckMouseover) return;
         //
-        if (!drawPoints) return;
+        float circRadius = r.tr.zoomBasedCirclePointRadius * 0.6;
+        // float circRadius = 2.0;
+        // circRadius *= circRadius;
+        // circRadius /= 10;
+
+        // writefln("%s, %s", circRadius, 1.0 / circRadius);
+        if (!drawPoints || circRadius < 0.5) return;
+        // if (circRadius <= 0) return;
 
         foreach (kv; cell.points.byKeyValue) {
             auto pt = kv.value;
@@ -132,9 +170,9 @@ private:
 
             bool mouseover = shouldCheckMouseover &&
                 pt.withinRadiusOf(transform.cursorPos, transform.cursorRadius);
-            auto color = mouseover ? defaultColor : mouseoverColor;
+            auto color = mouseover ? mouseoverColor : defaultColor;
             // if (pt.withinRadiusOf(transform.cursorPos, pointsWithinRadius)) {
-            r.drawPoint(pt, color, mouseover ? 6.0f : 3.0f);
+            r.drawPoint(pt, color, mouseover ? circRadius * 1.5 : circRadius);
             // }
             //
             if (mouseover) {

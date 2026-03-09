@@ -58,28 +58,25 @@ public:
         guiRects.length = 0;
         import raygui;
         auto showGridBackgroundLayer = grid.getOrCreateLayer("show-grid-background").id;
-        float x = 600, y = 30;
-        GuiPanel(layoutGuiRect(x,y,500,200), "layers");
+        float x = 20, y = 30;
+        GuiPanel(layoutGuiRect(x,y,500,310), "layers");
         x += 5; y += 30;
 
-        foreach (layer; grid.layers.byValue) {
-            if (layer.id !in layerViews) {
-                layerViews[layer.id] = LayerView();
-            }
-            auto visible = view.layerFilters.isVisible(layer.id);
+        void checkboxToggle(ref bool value, string label) {
             auto r = Rectangle(x, y, 25, 25);
-            auto msg = "%s: %s\0".format(layer.name, layer.id);
-
-            auto wasVisible = visible;
-            auto selected = GuiCheckBox(r, msg.ptr, &visible);
-            if (wasVisible != visible) {
-                view.layerFilters.setVisible(layer.id, visible);
-            }
-            // layerViews[layer.id].visible = visible;
             y += 35;
+            GuiCheckBox(r, label.ptr, &value);
         }
-        // drawGridRects = layerViews[showGridBackgroundLayer].visible;
+        checkboxToggle(view.drawStrictGridCellBounds, "show grid bounds (strict)\0");
+        checkboxToggle(view.drawCellBounds, "show cell bounds (actual)\0");
+        checkboxToggle(view.drawGeoBounds, "show geometry bounds\0");
 
+        foreach (layer; grid.layers.byValue) {
+            checkboxToggle(
+                view.layerFilters.getOrInsert(layer.id).visible,
+                "%s: %s\0".format(layer.name, layer.id)
+            );
+        }
         y += 40; auto y0 = y; auto panelWidth = 300;
         if (selectedIds.length) {
             GuiPanel(layoutGuiRect(x,y,panelWidth,1000), "selected");
@@ -190,6 +187,7 @@ public:
         this.view.view = bounds;
     }
     void update () {
+        updateMouseover();
         textf("view bounds: %s", viewBounds.to!PolarDeg);
         textf("view size:   %s", viewBounds.size.to!PolarDeg);
 
