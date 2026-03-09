@@ -359,26 +359,26 @@ bool visitMatchingAll (TQuery,TVisitor)(TQuery query, ref const(FlexGeo) g, TVis
     return false; // TODO: matchVisitImpl has known bugs (see ISSUES.md), stubbed
 }
 
-struct VisitBoth {
-    alias VisitObjectTypeDg = void delegate(scope FlexObject);
-    alias VisitPrimTypeDg   = void delegate(scope Prim);
+// struct VisitBoth {
+//     alias VisitObjectTypeDg = void delegate(scope FlexObject);
+//     alias VisitPrimTypeDg   = void delegate(scope Prim);
 
-    VisitObjectTypeDg visitObjectDg;
-    VisitPrimTypeDg visitPrimDg;
+//     VisitObjectTypeDg visitObjectDg;
+//     VisitPrimTypeDg visitPrimDg;
 
-    void visit (scope FlexObject obj) { if (visitObjectDg) visitObjectDg(obj); }
-    void visit (scope Prim prim)  { if (visitPrimDg) visitPrimDg(prim); }
-}
-struct VisitBounds {
-    alias VisitObjectBoundsDg = void delegate( scope FlexObject, AABB bounds, bool boundsHit, bool objectHit );
-    alias VisitPrimBoundsDg   = void delegate( scope Prim,   AABB bounds, bool boundsHit, bool geoHit );
-    VisitObjectBoundsDg visitObjectBoundsDg;
-    VisitPrimBoundsDg visitPrimBoundsDg;
+//     void visit (scope FlexObject obj) { if (visitObjectDg) visitObjectDg(obj); }
+//     void visit (scope Prim prim)  { if (visitPrimDg) visitPrimDg(prim); }
+// }
+// struct VisitBounds {
+//     alias VisitObjectBoundsDg = void delegate( scope FlexObject, AABB bounds, bool boundsHit, bool objectHit );
+//     alias VisitPrimBoundsDg   = void delegate( scope Prim,   AABB bounds, bool boundsHit, bool geoHit );
+//     VisitObjectBoundsDg visitObjectBoundsDg;
+//     VisitPrimBoundsDg visitPrimBoundsDg;
 
-    void visit( scope FlexObject obj, AABB bounds, bool boundsHit, bool objectHit ) {
-        if (visitObjectBoundsDg) visitObjectBoundsDg(obj, bounds, boundsHit, objectHit);
-    }
-    void visit( scope Prim prim,  AABB bounds, bool boundsHit, bool primHit ) {
-        if (visitPrimBoundsDg) visitPrimBoundsDg(prim, bounds, boundsHit, primHit);
-    }
-}
+//     void visit( scope FlexObject obj, AABB bounds, bool boundsHit, bool objectHit ) {
+//         if (visitObjectBoundsDg) visitObjectBoundsDg(obj, bounds, boundsHit, objectHit);
+//     }
+//     void visit( scope Prim prim,  AABB bounds, bool boundsHit, bool primHit ) {
+//         if (visitPrimBoundsDg) visitPrimBoundsDg(prim, bounds, boundsHit, primHit);
+//     }
+// }

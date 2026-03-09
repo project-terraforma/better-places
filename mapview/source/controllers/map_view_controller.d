@@ -58,15 +58,51 @@ public:
         guiRects.length = 0;
         import raygui;
         auto showGridBackgroundLayer = grid.getOrCreateLayer("show-grid-background").id;
+        float lineHeight = Renderer.fontSize + 4;
         float x = 20, y = 30;
         GuiPanel(layoutGuiRect(x,y,500,310), "layers");
-        x += 5; y += 30;
+        x += 5; y += lineHeight * 1.5;
+        auto panelWidth = 300;
 
         void checkboxToggle(ref bool value, string label) {
-            auto r = Rectangle(x, y, 25, 25);
+            auto r = Rectangle(x, y, 25, lineHeight * 1.5);
             y += 35;
             GuiCheckBox(r, label.ptr, &value);
         }
+        void label (string text) {
+            GuiLabel(Rectangle(x, y, 1000, lineHeight), text.ptr);
+            y += lineHeight;
+        }
+
+        void inspect (FlexCellId entity) {
+            auto id = entity.id;
+            auto cell = entity.cell;
+            auto objType = entity.id in cell.objects.objectTypes;
+            label("%s\0".format(objType));
+
+            auto addr = entity.id in cell.objects.addressPins;
+            auto bldg = entity.id in cell.objects.buildings;
+            auto plc = entity.id in cell.objects.places;
+
+            if (addr) {
+                auto a = addr.rawAddress;
+                label("addr (street '%s', number '%s', free '%s', locale %s)\0".format(a.street, a.number, a.freeform, a.locale));
+            }
+            if (bldg) {
+                label("bldg\0");
+            }
+            if (plc) {
+                label("place '%s'\0".format(plc.name));
+                foreach (a; plc.rawAddresses) {
+                    label("    address (street '%s', number '%s', free '%s', locale %s)\0".format(a.street, a.number, a.freeform, a.locale));
+                }
+                foreach (cat; plc.categories) {
+                    label("    category %s\0".format(cat));
+                }
+            }
+        }
+
+
         checkboxToggle(view.drawStrictGridCellBounds, "show grid bounds (strict)\0");
         checkboxToggle(view.drawCellBounds, "show cell bounds (actual)\0");
         checkboxToggle(view.drawGeoBounds, "show geometry bounds\0");
@@ -77,13 +113,14 @@ public:
                 "%s: %s\0".format(layer.name, layer.id)
             );
         }
-        y += 40; auto y0 = y; auto panelWidth = 300;
+        y += 40; auto y0 = y;
         if (selectedIds.length) {
             GuiPanel(layoutGuiRect(x,y,panelWidth,1000), "selected");
             foreach (id; selectedIds) {
-                y += 30;
+                y += lineHeight;
                 auto layerName = grid.layers[id.cell.layer].name;
-                GuiLabel(Rectangle(x,y,panelWidth, 30), "%s %s\0".format(id.geoType, layerName).ptr);
+                inspect(id);
+                GuiLabel(Rectangle(x,y,panelWidth, lineHeight), "%s %s\0".format(id.geoType, layerName).ptr);
             }
         }
         if (selectedIds.length) {
@@ -92,9 +129,10 @@ public:
         if (mouseoverIds.length) {
             GuiPanel(layoutGuiRect(x,y,500,400), "mouseover");
             foreach (id; mouseoverIds) {
-                y += 30;
+                y += lineHeight;
+                inspect(id);
                 auto layerName = grid.layers[id.cell.layer].name;
-                GuiLabel(Rectangle(x,y,panelWidth, 30), "%s %s\0".format(id.geoType, layerName).ptr);
+                GuiLabel(Rectangle(x,y,panelWidth, lineHeight), "%s %s\0".format(id.geoType, layerName).ptr);
             }
         }
     }

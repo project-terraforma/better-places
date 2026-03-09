@@ -2,6 +2,7 @@ module models.flexgrid.grid;
 import models.flexgrid.key;
 import models.flexgrid.flexgeo;
 import models.flexgrid.serio;
+import models.flexgrid.flexobject;
 import std;
 
 struct FlexCellId {
@@ -28,6 +29,7 @@ struct FlexCellId {
 class FlexCell {
 public:
     struct Data {
+        FlexGrid                    grid;
         FlexCellKey                 cellKey;
         uint                        layer;
 
@@ -36,7 +38,8 @@ public:
         TAABB!(PolarNorm)[uint]     geoBounds;
         FlexGeo[uint]               geo;
         TPoint!(PolarNorm)[uint]    points;
-        FlexObject[uint]            objects;
+
+        CellObjectStore             objects;
 
         // nonzerialized
         JSONValue[uint]             decodedProps;
@@ -67,6 +70,7 @@ public:
 
     Data data; alias data this;
     this (FlexGrid intoGrid, FlexCellKey key, uint layer) {
+        this.grid = intoGrid;
         this.cellKey = key; this.layer = layer;
         auto b = key.bounds;
         this.bounds = AABB(key.bounds.minv,key.bounds.minv);
@@ -142,15 +146,16 @@ public:
     void addGeometry (TGeometry)(UUID uuid, TGeometry g) {
         addGeometry(uuid, g.toFlexGeo());
     }
-    void insert (UUID uuid, FlexObject object) {
-        auto id = getOrInsertId(uuid);
-        objects[id] = object;
-    }
-    void insert (TObject)(UUID uuid, TObject object)
-        if (is(TObject : FlexObject))
-    {
-        insert(uuid, cast(FlexObject)object);
-    }
+
+    // void insert (UUID uuid, FlexObject object) {
+    //     auto id = getOrInsertId(uuid);
+    //     objects[id] = object;
+    // }
+    // void insert (TObject)(UUID uuid, TObject object)
+    //     if (is(TObject : FlexObject))
+    // {
+    //     insert(uuid, cast(FlexObject)object);
+    // }
 }
 interface IFlexCellFactory {
     FlexCell create (FlexGrid grid, FlexCellKey key, uint layer);
@@ -186,9 +191,15 @@ class FlexGrid {
     uint[string]                layersByName;
     uint                        nextLayerId = 0;
 
+    import msgpack: serializedAs;
+    @serializedAs!NotSerialized
+    FlexObject[UUID]            allObjectsCache;
+
     // FlexCell[FlexCellKey]  cells;
     // FlexIndex[FlexCellKey] cellIndexes;
     IFlexCellFactory       cellFactory;
+
+    GlobalObjectCache       globalObjectCache;
 public:
     this () { this.cellFactory = new BasicCellFactory(); }
     this (IFlexCellFactory factory) { this.cellFactory = factory; }
@@ -276,21 +287,97 @@ public:
         //     }
         // }
     }
+    auto findObject (UUID uuid) { return globalObjectCache.findObject(uuid); }
 }
-
-
 struct FlexPoint {
     FlexCellKey key;
     float       relX, relY;
 }
-class FlexObject {}
 
-class FlexView : FlexObject {
-    string              name;
-    string              description;
-    FlexObject[UUID]    items;
-}
+
+// class FlexView : FlexObject {
+//     string              name;
+//     string              description;
+//     FlexObject[UUID]    items;
+// }
 struct FlexIndex {}
 void updateCellCreated(ref FlexIndex[FlexCellKey] index, FlexCellKey key) {
 
+}
+
+struct Reference(T) if (is(T : FlexObject)) {
+    UUID        uuid;
+    T           directReference;
+    bool        loaded = false;
+
+    this (T obj)
+        in { assert(obj !is null); }
+        do { uuid = obj.uuid; directReference = obj; }
+
+    T get (FlexGrid grid)
+        in { assert(grid !is null); }
+        do {
+            if (directReference is null) {
+                directReference = grid.findObject(uuid).asObjectType!T;
+            }
+            return directReference;
+        }
+
+    @property bool isLoaded () { return directReference !is null; }
+}
+Reference!T refOf (T)(T obj)
+    if (is(T : FlexObject))
+    in { assert(obj !is null); }
+    do {
+        return Reference!T(obj);
+    }
+
+struct ReferenceSet(T) if (is(T : FlexObject)) {
+    alias This = ReferenceSet!(T);
+    alias HashMap = T[UUID];
+    HashMap                         store;
+
+    T tryGet (UUID uuid, FlexGrid grid) {
+        T* ptr = uuid in store;
+        if (!ptr) return null;
+        if (*ptr is null) {
+            T found = grid.findObject(uuid).asObjectType!T;
+            *ptr = found;
+            return found;
+        }
+        return *ptr;
+    }
+    FwdRange iter (FlexGrid grid) { return FwdRange(this, grid); }
+    size_t length () { return store.length; }
+
+    struct FwdRange {
+        alias Iter = typeof(HashMap.init.byKeyValue);
+        private This* set;
+        private Iter iter;
+        FlexGrid grid;
+
+        this(ref This set, FlexGrid grid) { this.set = &set; this.iter = set.store.byKeyValue; advanceToNextValid(); }
+        private void advanceToNextValid() {
+            for (; !iter.empty; iter.popFront) {
+                if (iter.front.value is null) {
+                    auto found = grid.findObject(iter.front.key).asObjectType!T;
+                    if (!found) continue; // skip missing
+                    else {
+                        set.store[iter.front.key] = found;
+                        iter.front.value = found;
+                        break;
+                    }
+                } else break;
+            }
+        }
+        auto front () { return iter.front; }
+        auto empty () { return iter.empty; }
+        void popFront ()
+            in { assert(!empty); }
+            do {
+                iter.popFront();
+                advanceToNextValid();
+            }
+        auto save () { return this; }
+    }
 }

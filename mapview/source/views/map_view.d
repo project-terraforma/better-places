@@ -23,7 +23,7 @@ public:
 
     bool                drawPoints = true;
 
-    bool                drawGeoBounds = true;
+    bool                drawGeoBounds = false;
 
     enum GridCellBoundsCheck { UseCellBounds, UseGridBounds }
     enum gridCellBoundsCheck = GridCellBoundsCheck.UseCellBounds;

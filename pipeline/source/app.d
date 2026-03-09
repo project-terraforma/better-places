@@ -234,20 +234,35 @@ void load (TPart)(FlexGrid grid, OmfDataset dataset, OmfCollection!TPart collect
                     item.pos));
 
             cell.addPoint(item.id, point);
-            cell.decodedProps[id] = item.props;
-            // writefln("point %x (cell bounds %s)", key.value, cell.bounds.size.to!Meters);
-            // writefln("%s, %s, (%s) %s", key.bounds.minv, key.bounds.maxv, key.bounds.size.to!Meters, point);
+            insert(cell, item, id);
         } else {
             auto geo = toFlexGeo(item.geo);
             auto key = FlexCellKey.from(geo.bounds);
             auto cell = grid.getOrCreateCell(key, layerId);
             cell.addGeometry(item.id, geo);
             auto id = cell.getOrInsertId(item.id);
-            cell.decodedProps[id] = item.props;
-
-            // writefln("bounds %x (%s) (cell bounds %s)", key.value
-            //     , geo.bounds.size.to!Meters, cell.bounds.size.to!Meters);
-            // writefln("%s, %s, (%s) %s", key.bounds.minv, key.bounds.maxv, key.bounds.size.to!Meters, geo.bounds.minv);
+            insert(cell, item, id);
         }
     }
+}
+import models.flexgrid.flexobject: insertNew;
+
+void insert (FlexCell cell, Building item, uint id) {
+    // cell.decodedProps[id] = item.props;
+    cell.insertNew(item, id);
+}
+void insert (FlexCell cell, BuildingPart item, uint id) {
+    // import models.flexgrid_plugins.omf_data;
+    // cell.decodedProps[id] = item.props;
+    cell.insertNew(item, id);
+}
+void insert (FlexCell cell, models.omf.Address item, uint id) {
+    // import models.flexgrid_plugins.omf_data;
+    // cell.decodedProps[id] = item.props;
+    cell.insertNew(item, id);
+}
+void insert (FlexCell cell, Place item, uint id) {
+    // import models.flexgrid_plugins.omf_data;
+    // cell.decodedProps[id] = item.props;
+    cell.insertNew(item, id);
 }

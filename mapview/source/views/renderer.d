@@ -8,17 +8,17 @@ class Renderer {
     Font font;
     bool loaded = false;
     int  textLayoutPosY = 0;
-    int  fontSize = 24;
+    enum fontSize = 16;
     bool drawGridRects = false;
 
     void load () {
         if (loaded) return; loaded = true;
         // load fonts
         writefln("loading font");
-        this.font = LoadFontEx("fonts/JetBrainsMono/JetBrainsMono-Regular.ttf", 24, null, 250);
+        this.font = LoadFontEx("fonts/JetBrainsMono/JetBrainsMono-Regular.ttf", fontSize, null, 250);
         import raygui;
         GuiSetFont(font);
-        GuiSetStyle(DEFAULT, TEXT_SIZE, 24);
+        GuiSetStyle(DEFAULT, TEXT_SIZE, fontSize);
         // this.font = LoadFont("fonts/JetBrainsMono-Regular.ttf");
         writefln(" => %s", this.font);
     }

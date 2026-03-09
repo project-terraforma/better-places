@@ -3,6 +3,7 @@ import models.flexgrid.grid;
 import models.flexgrid.grid;
 import models.flexgrid.flexgeo;
 import models.flexgrid.flexgeo.serio;
+import models.flexgrid.flexobject;
 import msgpack;
 import std;
 
@@ -10,7 +11,9 @@ struct FlexCellIntermediate {
     UUID[uint]          ids;
     ubyte[][uint]       geo;
     Point[uint]         points;
-    FlexObject[uint]    objects;
+    CellObjectStore     objects;
+    // @serializedAs!(FlexObjectSerializer)
+    // FlexObject[uint]    objects;
     string[uint]        rawProps;
     AABB                bounds;
 }
@@ -44,4 +47,12 @@ void load (FlexCell cell, ubyte[] dataBytes) {
     cell.objects = data.objects;
     cell.rawProps = data.rawProps;
     cell.bounds = data.bounds;
+}
+static struct FlexObjectSerializer {
+    static void serialize (ref Packer p, ref FlexObject[uint] obj) {
+
+    }
+    static void deserialize(ref Unpacker u, ref FlexObject[uint] obj) {
+
+    }
 }

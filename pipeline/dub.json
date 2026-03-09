@@ -14,6 +14,7 @@
         "../data/tools/models/flexgrid",
         "../data/tools/models/geometry",
         "../data/tools/models/geojson",
-        "../data/tools/models/omf"
+        "../data/tools/models/omf",
+        "../data/tools/models/flexgrid_plugins"
     ]
 }
