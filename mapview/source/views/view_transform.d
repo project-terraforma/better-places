@@ -24,8 +24,10 @@ class ViewTransform {
             cursorRadiusPixels / mapToScreenScale.x
         ).to!Meters;
     }
-
     this (const MapViewController view) {
+        update(view);
+    }
+    void update (const MapViewController view) {
         this.viewBounds = view.viewBounds;
         auto screenSize = Point(GetScreenWidth(), GetScreenHeight());
         this.screenSize = Vector2(screenSize.x, screenSize.y);

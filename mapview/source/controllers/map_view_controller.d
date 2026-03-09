@@ -58,7 +58,7 @@ public:
         guiRects.length = 0;
         import raygui;
         auto showGridBackgroundLayer = grid.getOrCreateLayer("show-grid-background").id;
-        float x = 40, y = 30;
+        float x = 600, y = 30;
         GuiPanel(layoutGuiRect(x,y,500,200), "layers");
         x += 5; y += 30;
 
@@ -66,12 +66,16 @@ public:
             if (layer.id !in layerViews) {
                 layerViews[layer.id] = LayerView();
             }
-            auto visible = layerViews[layer.id].visible;
+            auto visible = view.layerFilters.isVisible(layer.id);
             auto r = Rectangle(x, y, 25, 25);
             auto msg = "%s: %s\0".format(layer.name, layer.id);
 
+            auto wasVisible = visible;
             auto selected = GuiCheckBox(r, msg.ptr, &visible);
-            layerViews[layer.id].visible = visible;
+            if (wasVisible != visible) {
+                view.layerFilters.setVisible(layer.id, visible);
+            }
+            // layerViews[layer.id].visible = visible;
             y += 35;
         }
         // drawGridRects = layerViews[showGridBackgroundLayer].visible;
@@ -229,5 +233,18 @@ public:
 
         }
         updateView(draggingView && !startDrag, zoomRel);
+    }
+    void updateAndRender () {
+        import views.view_transform;
+
+        this.update();
+
+        // create/update transform (ie screen to map transform, mouseover etc)
+        if (!r.tr) r.tr = new ViewTransform(this);
+        else r.tr.update(this);
+        view.render(r, this);
+
+        this.drawGui();
+
     }
 }

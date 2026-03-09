@@ -5,7 +5,7 @@ enum DEFAULT_LAYER_COLOR = Colors.GREEN;
 enum DEFAULT_LAYER_MOUSEOVER_COLOR = Colors.BLACK;
 
 struct LayerViewInfo {
-    bool  visible = false;
+    bool  visible = true;
     Color color = DEFAULT_LAYER_COLOR;
     Color mouseoverColor = DEFAULT_LAYER_MOUSEOVER_COLOR;
 }

@@ -55,9 +55,9 @@ class AppController {
     }
 private:
     void update () {
-        if (mapController) {
-            mapController.update();
-        }
+        // if (mapController) {
+        //     mapController.update();
+        // }
     }
     void render () {
         renderer.newFrame();
@@ -65,10 +65,12 @@ private:
             renderError(runtimeError);
         } else if (loaded) {
             assert(mapView !is null);
-            mapController.update();
+            mapController.updateAndRender();
+            // mapController.render();
+            // mapController.update();
             // mapView.render(renderer);
-            mapView.render(renderer, mapController); // hack
-            mapController.drawGui();
+            // mapView.render(renderer, mapController); // hack
+            // mapController.drawGui();
         } else {
             renderer.textf("loading dataset %s", dataset);
         }
@@ -81,6 +83,7 @@ private:
     }
     void onLoad (ref MapLoader loader, FlexGrid loadedGrid, AABB bounds) {
         assert(loadedGrid is this.grid);
+        this.loaded = true;
         if (!mapView) {
             mapView = new MapView(grid, bounds);
         }

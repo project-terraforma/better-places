@@ -4,6 +4,7 @@ import views.layer_view_filter;
 import views.entity_view_filter;
 import views.renderer;
 import base;
+import std;
 
 import controllers.map_view_controller; // hack
 
@@ -14,17 +15,17 @@ public:
     LayerViewFilter     layerFilters;
     EntityViewFilter    entityFilters;
 
-    bool                drawStrictGridCellBounds;
+    bool                drawStrictGridCellBounds = true;
     Color               drawStrictGridCellBoundsColor = Colors.BLUE;
 
-    bool                drawCellBounds;
+    bool                drawCellBounds = true;
     Color               drawCellBoundsColor = Colors.RED;
 
     bool                drawPoints = true;
 
     enum GridCellBoundsCheck { UseCellBounds, UseGridBounds }
-    // enum gridCellBoundsCheck = GridCellBoundsCheck.UseCellBounds;
-    enum gridCellBoundsCheck = GridCellBoundsCheck.UseGridBounds;
+    enum gridCellBoundsCheck = GridCellBoundsCheck.UseCellBounds;
+    // enum gridCellBoundsCheck = GridCellBoundsCheck.UseGridBounds;
 
     this (FlexGrid grid, AABB viewBounds)
         in { assert(grid !is null); }
@@ -34,18 +35,31 @@ public:
             this.entityFilters = new EntityViewFilter(grid);
         }
     void render (Renderer r, MapViewController c) {
+        r.textf("render %s", view.to!PolarDeg);
+        r.textf("    is %s", view);
+
+        drawStrictGridCellBounds = layerFilters.isVisible("show-grid-background");
         foreach (layer; grid.layers.byValue) {
-            if (!layerFilters.isVisible(layer.id)) continue;
+            r.textf("render layer %s '%s'", layer.id, layer.name);
+
+            if (!layerFilters.isVisible(layer.id)) {
+                r.textf("hidden layer %s", layer.name);
+                continue;
+            } else {
+                r.textf("layer %s has %s cells", layer.name, layer.cells.length);
+            }
+            size_t i = 0;
             foreach (kv; layer.cells.byKeyValue) {
                 auto cell = kv.value;
                 auto gridCellBounds = kv.key.bounds;
 
-                static if (gridCellBoundsCheck == GridCellBoundsCheck.UseGridBounds) {
-                    bool inBounds = view.contains(gridCellBounds);
-                } else {
-                    bool inBounds = view.contains(cell.bounds);
-                }
-                if (!inBounds) continue;
+                // r.textf("grid cell size: %s      %s     origin %s  view origin %s", gridCellBounds.size.to!Meters, cell.bounds.size.to!Meters
+                //             , cell.bounds.minv.to!PolarDeg, view.minv.to!PolarDeg
+                // );
+                // r.textf("         origin (raw) %s         view origin (raw) %s"
+                //         , cell.bounds.minv.to!PolarDeg, view.minv.to!PolarDeg
+                // );
+                // if (++i >= 10) break;
 
                 if (drawStrictGridCellBounds) {
                     r.drawRect(gridCellBounds, drawStrictGridCellBoundsColor);
@@ -53,6 +67,20 @@ public:
                 if (drawCellBounds) {
                     r.drawRect(cell.bounds, drawCellBoundsColor);
                 }
+
+                static if (gridCellBoundsCheck == GridCellBoundsCheck.UseGridBounds) {
+                    bool inBounds = view.contains(gridCellBounds);
+                } else {
+                    bool inBounds = view.contains(cell.bounds);
+                }
+                if (inBounds) {
+                    writefln("cell %s is in bounds", kv.key);
+                } else {
+                    // writefln("%s not in bounds %s", view, gridCellBounds);
+                }
+                if (!inBounds) continue;
+
+
                 drawCell(layer.id, cell, r, c);
             }
         }
