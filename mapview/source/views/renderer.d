@@ -79,6 +79,12 @@ class Renderer {
             drawLine(ring.points[i-1], ring.points[i], color, lineThickness);
         }
     }
+    void drawLines (const LineString lines, Color color, float lineThickness = 1) {
+        size_t n = lines.points.length;
+        for (size_t i = 1; i < n; ++i) {
+            drawLine(lines.points[i-1], lines.points[i], color, lineThickness);
+        }
+    }
     void draw (AABB r, Color color, float lineThickness = 1) {
         auto a = tr.transform(r.minv), b = tr.transform(r.maxv);
         DrawLineEx(a, Vector2(b.x, a.y), lineThickness, color);

@@ -339,6 +339,14 @@ Place createNew (models.omf.Place item) {
 }
 
 void insertNew(FlexCell cell, models.omf.Segment item, uint id) {
+    auto geo = id in cell.geo;
+    if (geo) {
+        writefln("%s", *geo);
+    } else {
+        assert(false, "no segment geometry??");
+    }
+
+
     cell.objects.objectTypes[id] = ObjectType.OmfSegment;
     cell.objects.segments[id] = createNew(item);
 }

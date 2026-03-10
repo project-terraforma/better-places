@@ -153,8 +153,12 @@ private:
                         case GeoType.RingOuter: case GeoType.RingInner:
                             r.drawRing(Ring(prim.points), color, lineThickness);
                             break;
-                        case GeoType.Points: /* TODO */ assert(false, "TODO"); break;
+                        case GeoType.Points:  r.drawLines(LineString(prim.points), color, lineThickness); break;
                         case GeoType.Point: assert(false, "TODO"); break;
+                        case GeoType.Line:
+                            assert(false);
+
+                            break;
                         default: assert(false, "invalid %s".format(prim.type));
                     }
                 }

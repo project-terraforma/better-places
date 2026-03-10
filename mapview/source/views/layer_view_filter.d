@@ -21,6 +21,7 @@ class LayerViewFilter {
         setColors("omf.address",  Colors.ORANGE, DEFAULT_LAYER_MOUSEOVER_COLOR);
         setColors("omf.building", Colors.PURPLE, DEFAULT_LAYER_MOUSEOVER_COLOR);
         setColors("omf.place",    Colors.RED, DEFAULT_LAYER_MOUSEOVER_COLOR);
+        setColors("omf.segment",  Colors.GREEN, Colors.GREEN);
     }
 
     LayerViewInfo* get (uint id) { return id in layerInfo; }

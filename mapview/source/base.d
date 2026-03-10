@@ -11,3 +11,4 @@ alias Ring = Geometry.Ring;
 alias AABB = Geometry.AABB;
 alias Polygon = Geometry.Polygon;
 alias MultiPolygon = Geometry.MultiPolygon;
+alias LineString = Geometry.LineString;

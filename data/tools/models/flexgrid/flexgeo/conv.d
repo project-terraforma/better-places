@@ -93,8 +93,9 @@ struct FlexGeoBuilder {
         return cast(uint)(g.entities.length - 1);
     }
     void add (U)(TLineString!U l) {
-        begin(GeoType.Line, cast(uint)l.points.length, true);
-        auto bounds = stack[$-1].bounds;
+        begin(GeoType.Line, 1, true);
+        begin(GeoType.Points, cast(uint)l.points.length, false);
+        auto bounds = stack[$-2].bounds;
         foreach (k, point; l.points) {
             Point pt = point.to!PolarNorm;
             g.points ~= pt;
@@ -104,9 +105,16 @@ struct FlexGeoBuilder {
                 bounds.minv = bounds.maxv = pt;
             }
         }
-        stack[$-1].bounds = bounds;
-        stack[$-1].hasSetBounds = true;
+        stack[$-2].bounds = bounds;
+        stack[$-2].hasSetBounds = true;
         end(false);
+        end(false);
+        // import std;
+        // assert(false,
+        //     "%s\n%s\n%s".format(g,
+        //         bounds.to!PolarDeg
+        //         , l.points.map!(p => p.to!PolarDeg).array
+        //         ));
     }
     void add (U)(TMultiPolygon!U p, bool addBounds, bool addChildBounds = true) {
         if (p.polygons.length <= 1) {

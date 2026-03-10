@@ -100,6 +100,13 @@ bool containsOrNearPoint (U=Meters)(FlexGeo g, Point p, TScalar!U nearPointOrLin
                     }
                 }
                 break;
+            case GeoType.Points:
+                foreach (point; prim.points) {
+                    if (pointWithinRadiusOf(p, point, nearPointOrLineThreshold)) {
+                        return true;
+                    }
+                }
+                break;
             default: assert(0);
         }
     }
