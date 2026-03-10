@@ -11,8 +11,10 @@ public:
     OmfCollection!BuildingPart  building_part;
     OmfCollection!Place         place;
     OmfCollection!Address       address;
+    OmfCollection!Segment       segment;
+    OmfCollection!Connector     connector;
 
-    enum PARTS = ["building", "building_part", "place", "address"];
+    enum PARTS = ["building", "building_part", "place", "address", "segment", "connector"];
 
     This loadGeoJson(string datasetDirectory) {
         auto filePaths = PARTS
@@ -158,6 +160,40 @@ struct Address {
         f.geo.value.tryVisit!(
             (Point p) { this.pos = p; },
             () { enforce(false, "invalid Address geometry! %s".format(f.geo)); }
+        );
+    }
+}
+struct Connector {
+    alias This = Connector;
+    alias Geometry = Point;
+
+    OmfFeatureBase base; alias base this;
+    Point pos; alias pos geo;
+
+    static This parse (JSONValue v) { return This(v.parseFeature); }
+
+    this (models.geojson.Feature f) {
+        this.base = OmfFeatureBase(f);
+        f.geo.value.tryVisit!(
+            (Point p) { this.pos = p; },
+            () { enforce(false, "invalid Connector geometry! %s".format(f.geo)); }
+        );
+    }
+}
+struct Segment {
+    alias This = Segment;
+    alias Geometry = Point;
+
+    OmfFeatureBase base; alias base this;
+    LineString geo;
+
+    static This parse (JSONValue v) { return This(v.parseFeature); }
+
+    this (models.geojson.Feature f) {
+        this.base = OmfFeatureBase(f);
+        f.geo.value.tryVisit!(
+            (LineString g) { this.geo = g; },
+            () { enforce(false, "invalid Street geometry! %s".format(f.geo)); }
         );
     }
 }

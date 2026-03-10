@@ -266,3 +266,13 @@ void insert (FlexCell cell, Place item, uint id) {
     // cell.decodedProps[id] = item.props;
     cell.insertNew(item, id);
 }
+void insert (FlexCell cell, models.omf.Connector item, uint id) {
+    // import models.flexgrid_plugins.omf_data;
+    // cell.decodedProps[id] = item.props;
+    cell.insertNew(item, id);
+}
+void insert (FlexCell cell, models.omf.Segment item, uint id) {
+    // import models.flexgrid_plugins.omf_data;
+    // cell.decodedProps[id] = item.props;
+    cell.insertNew(item, id);
+}

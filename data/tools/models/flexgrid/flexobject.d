@@ -12,6 +12,8 @@ struct CellObjectStore {
     Address[uint]           addresses;
     AddressPin[uint]        addressPins;
     BuildingPart[uint]      buildingParts;
+    OmfSegment[uint]        segments;
+    OmfConnector[uint]      connectors;
     SourceInfo[][uint]      sources;
 }
 struct GlobalObjectCache {
@@ -91,7 +93,7 @@ SourceInfo[] getSources (FlexCell cell, JSONValue[string] props) {
 
 enum ObjectType {
     Place, Building, Street, Address, AddressPin
-    , BuildingPart
+    , BuildingPart, OmfConnector, OmfSegment
 }
 struct ObjectRef {
     ulong cell;
@@ -116,6 +118,8 @@ struct Place {
 struct Building {}
 struct BuildingPart {}
 struct Street {}
+struct OmfConnector {}
+struct OmfSegment {}
 struct Address {}
 struct AddressPin {
     RawAddressInfo rawAddress;
@@ -331,5 +335,24 @@ Place createNew (models.omf.Place item) {
         }
         writefln("categories = %s", result.categories);
     }
+    return result;
+}
+
+void insertNew(FlexCell cell, models.omf.Segment item, uint id) {
+    cell.objects.objectTypes[id] = ObjectType.OmfSegment;
+    cell.objects.segments[id] = createNew(item);
+}
+OmfSegment createNew (models.omf.Segment item) {
+    OmfSegment result;
+
+    return result;
+}
+void insertNew(FlexCell cell, models.omf.Connector item, uint id) {
+    cell.objects.objectTypes[id] = ObjectType.OmfConnector;
+    cell.objects.connectors[id] = createNew(item);
+}
+OmfConnector createNew (models.omf.Connector item) {
+    OmfConnector result;
+
     return result;
 }

@@ -7,6 +7,13 @@ import models.geometry.bounds;
 alias Point = models.flexgrid.flexgeo.data.Point;
 alias AABB = models.flexgrid.flexgeo.data.AABB;
 
+FlexGeo toFlexGeo (U)(TLineString!U p, uint* optId = null, string tag = null) {
+    FlexGeoBuilder b;
+    if (optId) b.annotateId(*optId);
+    if (tag) b.annotateTag(tag);
+    b.add(p);
+    return b.build();
+}
 FlexGeo toFlexGeo (U)(TMultiPolygon!U p, uint* optId = null, string tag = null) {
     FlexGeoBuilder b;
     if (optId) b.annotateId(*optId);
@@ -84,6 +91,22 @@ struct FlexGeoBuilder {
         g.points ~= Point(0,0); g.points ~= Point(0,0);
         g.entities ~= Entity(GeoType.Bounds);
         return cast(uint)(g.entities.length - 1);
+    }
+    void add (U)(TLineString!U l) {
+        begin(GeoType.Line, cast(uint)l.points.length, true);
+        auto bounds = stack[$-1].bounds;
+        foreach (k, point; l.points) {
+            Point pt = point.to!PolarNorm;
+            g.points ~= pt;
+            if (k > 0) {
+                bounds.grow(pt);
+            } else {
+                bounds.minv = bounds.maxv = pt;
+            }
+        }
+        stack[$-1].bounds = bounds;
+        stack[$-1].hasSetBounds = true;
+        end(false);
     }
     void add (U)(TMultiPolygon!U p, bool addBounds, bool addChildBounds = true) {
         if (p.polygons.length <= 1) {
