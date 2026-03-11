@@ -38,9 +38,9 @@ class Renderer {
             import core.stdc.string: memcpy;
             memcpy(buf.ptr, msg.ptr, msg.length);
             buf[msg.length] = '\0';
-            drawText(buf.ptr, x, y, color);
+            // drawText(buf.ptr, x, y, color);
         } else {
-            drawText(msg.toStringz, x, y, color);
+            // drawText(msg.toStringz, x, y, color);
         }
     }
     private void drawText (const(char)* msg, int x, int y, Color color) {

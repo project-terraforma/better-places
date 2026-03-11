@@ -78,7 +78,6 @@ public:
             auto id = entity.id;
             auto cell = entity.cell;
             auto objType = entity.id in cell.objects.objectTypes;
-            label("%s\0".format(objType));
 
             auto addr = entity.id in cell.objects.addressPins;
             auto bldg = entity.id in cell.objects.buildings;
@@ -89,7 +88,8 @@ public:
                 label("addr (street '%s', number '%s', free '%s', locale %s)\0".format(a.street, a.number, a.freeform, a.locale));
             }
             if (bldg) {
-                label("bldg\0");
+                auto uuid = id in cell.ids;
+                label("building %s\0".format(*uuid));
             }
             if (plc) {
                 label("place '%s'\0".format(plc.name));
@@ -116,11 +116,11 @@ public:
         y += 40; auto y0 = y;
         if (selectedIds.length) {
             GuiPanel(layoutGuiRect(x,y,panelWidth,1000), "selected");
+            y += 20;
             foreach (id; selectedIds) {
-                y += lineHeight;
                 auto layerName = grid.layers[id.cell.layer].name;
+                label("%s\0".format(layerName));
                 inspect(id);
-                GuiLabel(Rectangle(x,y,panelWidth, lineHeight), "%s %s\0".format(id.geoType, layerName).ptr);
             }
         }
         if (selectedIds.length) {
@@ -128,11 +128,11 @@ public:
         }
         if (mouseoverIds.length) {
             GuiPanel(layoutGuiRect(x,y,500,400), "mouseover");
+            y += 20;
             foreach (id; mouseoverIds) {
-                y += lineHeight;
-                inspect(id);
                 auto layerName = grid.layers[id.cell.layer].name;
-                GuiLabel(Rectangle(x,y,panelWidth, lineHeight), "%s %s\0".format(id.geoType, layerName).ptr);
+                label("%s\0".format(layerName));
+                inspect(id);
             }
         }
     }
@@ -155,7 +155,11 @@ public:
     private void updateMouseover() {
         scope(exit) mouseoverIds.length = 0;
         if (IsMouseButtonPressed(0) && !isMouseInUI) {
-            selectedIds = mouseoverIds;
+            if (IsKeyDown(KeyboardKey.KEY_LEFT_SHIFT ) || IsKeyDown(KeyboardKey.KEY_RIGHT_SHIFT )) {
+                selectedIds ~= mouseoverIds;
+            } else {
+                selectedIds = mouseoverIds;
+            }
         }
     }
     void mouseover (FlexCellId id) {
