@@ -1,8 +1,36 @@
 # Better Places
-Project / prototypes for the Overture Maps Foundation at correcting pin placements, collecting more data,
-and fixing / associating data within OMF that's missing useful relational labels.
+Prototypes for the Overture Maps Foundation on places + geospatial data.
 
-Plus other experiments etc.
+Scope crept into a mini few-dependencies D library + map viewer for working
+with overture maps data thru geojson data.
+
+## Demo
+
+Run
+```bash
+make run
+```
+
+### Dependencies
+
+* D (`ldc2` or `dmd`, `rdmd`, `dub`)
+  * `wget dlang.org/install.sh && bash install.sh`
+* sqlite3 
+  * linux: `apt install sqlite3 libsqlite3-dev`
+* the `overturemaps` python CLI
+  * python
+  * `pip3 install overturemaps --break-system-packages`
+
+#### All dependencies:
+```bash
+wget dlang.org/install.sh && bash install.sh
+pip3 install overturemaps --break-system-packages
+sudo apt install sqlite3 libsqlite3-dev
+cd mapview && dub run raylib-d:install && cd ..
+```
+```bash
+make run
+```
 
 ## To fetch source data:
 ### Overture Maps Data
@@ -28,19 +56,6 @@ data/tools/fetch_omf_data.d -p -f geoparquet sc building address
 # ^ equivalent, can specify any combination of themes + datasets / regions
 ```
 
-## Dependencies
-
-* docker TBD
-* https://dlang.org
-  * (install from there or use `ldc` aka `ldc2`: https://github.com/ldc-developers/ldc)
-  * you need `rdmd` (`apt install <dmd | ldc>` / `brew install <dmd | ldc>` should suffice, probably)
-  * note that `ldc` is variously called `ldc` and `ldc2`
-  * (note: LDC is the LLVM based D compiler; `dmd` is the *very fast* reference
-    compiler w/ its own backend. `dmd` is / was very x86/64 dependent, and ARM ie aarch64 support is an active work in progress)
-* `overturemaps` python CLI
-  * https://docs.overturemaps.org/getting-data/overturemaps-py/
-  * (the data fetching + processing tools in `data/tools` are just structured wrappers around that)
-
 ## General Overview
 
 ### Data Fetching Tools
@@ -52,15 +67,11 @@ data/tools/fetch_omf_data.d -p -f geoparquet sc building address
 
 ### Experimental Map Viewer
 
-* in progress
+* in `mapview`
 
-### Local Crowdsourced Data App
+### Ad hoc (temporary) geojson => flexgrid conversion script
 
-* early prototypes in a separate repo, needs to be committed here
-
-### Other data fetching tools + datasets
-
-* in progress
+* in `pipeline`
 
 ## Tools
 Write out geojson data to a hex dump:
@@ -97,12 +108,3 @@ data/tools/summarize_omf.d
 # Experimental map viewer
 
 See `mapview`
-
-Demo w/ a single copy + paste: (docker TBD)
-```bash
-data/tools/fetch_omf_data.d -p all
-cd mapview
-dub upgrade
-dub run raylib-d:install
-dub run
-```
