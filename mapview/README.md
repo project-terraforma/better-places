@@ -26,6 +26,10 @@ make sure you pulled data / the santa cruz data set (above)
 
 ## Notes:
 
+EDIT: this info is only partially accurate. see `models.geometry.unit` for a replacement / partial refactor. EDIT 2: yes we are still of note using raylib
+for *screenspace* coordiantes and Point for world space etc coordinates. still
+a good idea.
+
 There are *intentionally* two different point / vec2 types in use here.
 * Point: (from `data/tools/models/geometry/package.d`)
   * geospatial `Point` type
@@ -47,8 +51,8 @@ There are *intentionally* two different point / vec2 types in use here.
 #### TODO
 
 * webmercator map projection (currenly using RAW lat/long => screenspace, which obviously produces geometry distortion errors, but is fine / workable as is)
-* search + go-to
-* view filtering (and/or toolkit for easy view filtering)
+* search + go-to (stretch feature)
+* view filtering (and/or toolkit for easy view filtering. stretch feature)
 * better / faster data backend (flexgrid?)
-* better rendering
+* better rendering (uniportant, okay as is. perf issues need to be fixed by the above)
 * etc

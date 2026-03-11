@@ -6,6 +6,15 @@ import std.algorithm;
 import std.array;
 import std;
 
+alias Geometry = TGeometry!PolarDeg;
+alias Point = Geometry.Point;
+alias AABB = Geometry.AABB;
+alias Ring = Geometry.Ring;
+alias Polygon = Geometry.Polygon;
+alias MultiPolygon = Geometry.MultiPolygon;
+// alias Line = Geometry.Line;
+alias LineString = Geometry.LineString;
+
 struct FeatureCollection {
     Feature[] features;
 }
@@ -20,6 +29,8 @@ Geometry parseGeometry (JSONValue v) {
         case "Point":   return Geometry(v["coordinates"].parsePoint.annotateErr("in (type = %s) %s".format(v["type"], v))); break;
         case "Polygon": return Geometry(v["coordinates"].parsePolygon.annotateErr("in (type = %s) %s".format(v["type"], v))); break;
         case "MultiPolygon": return Geometry(v["coordinates"].parseMultiPolygon.annotateErr("in (type = %s) %s".format(v["type"], v))); break;
+        case "LineString": return Geometry(v["coordinates"].parseLineString.annotateErr("in (type = %s) %s".format(v["type"], v))); break;
+        // case "Line": return Geometry(v["coordinates"].parseLine.annotateErr("in (type = %s) %s".format(v["type"], v))); break;
         default: enforce(false, "unhandled geometry type %s".format(v));
     }
     assert(0);
@@ -40,6 +51,15 @@ MultiPolygon parseMultiPolygon (JSONValue v) {
     assert(v.type == JSONType.array);
     return MultiPolygon(v.array.map!parsePolygon.array.annotateErr("in multipolygon '%s'".format(v)));
 }
+// Line parseLine (JSONValue v) {
+//     assert(v.type == JSONType.array);
+//     return Line(v.array.map!parsePoint.array.annotateErr("in line '%s'".format(v)));
+// }
+LineString parseLineString (JSONValue v) {
+    assert(v.type == JSONType.array);
+    return LineString(v.array.map!parsePoint.array.annotateErr("in line string '%s'".format(v)));
+}
+
 Feature parseFeature (JSONValue v) {
     assert(v.type == JSONType.object && v["type"].str == "Feature");
     auto props = v["properties"].object;

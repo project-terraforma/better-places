@@ -1,0 +1,20 @@
+{
+    "authors": ["Seiji Emery"],
+    "copyright": "Copyright © 2026, Seiji Emery",
+    "dependencies": {
+        "d2sqlite3": "~>1.0.0",
+        "msgpack-d": "~>1.0.5"
+    },
+    "description": "better-places data pipeline",
+    "license": "Apache-2.0",
+    "name": "pipeline",
+    "importPaths": ["source", "../data/tools"],
+    "sourcePaths": [
+        "source",
+        "../data/tools/models/flexgrid",
+        "../data/tools/models/geometry",
+        "../data/tools/models/geojson",
+        "../data/tools/models/omf",
+        "../data/tools/models/flexgrid_plugins"
+    ]
+}
