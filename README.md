@@ -1,8 +1,8 @@
 # Better Places
 Prototypes for the Overture Maps Foundation on places + geospatial data.
 
-Scope crept into a mini few-dependencies D library + map viewer for working
-with overture maps data thru geojson data.
+Scope crept into a mini few-dependencies D library + map viewer for working with overture maps data thru geojson data, and an experimental
+spatial data storage + processing structure called "flexgrid".
 
 ## Demo
 
@@ -15,6 +15,7 @@ make run
 
 * D (`ldc2` or `dmd`, `rdmd`, `dub`)
   * `wget dlang.org/install.sh && bash install.sh`
+  * (note: needed as mainline apt support for D is abysmal. for macos just use `brew`)
 * sqlite3 
   * linux: `apt install sqlite3 libsqlite3-dev`
 * the `overturemaps` python CLI
@@ -108,3 +109,7 @@ data/tools/summarize_omf.d
 # Experimental map viewer
 
 See `mapview`
+
+# FlexGrid, FlexGeo
+
+See `data/tools/models`

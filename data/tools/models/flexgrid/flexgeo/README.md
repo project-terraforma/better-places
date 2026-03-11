@@ -1,8 +1,23 @@
 # FlexGeo: Binary Geometry Format Spec
 
-**Status:** v0.1 MVP spec
+
+(TODO cleanup etc. some of this spec is very out of date with the
+implementation, eg prefix instead of suffix tag structures, no
+metadata structures implemented, and restricted / simplified implementation for now)
+
+The core ideas are similar.
+
+See:
+* `data.d`: core data structures + layout
+* `conv.d`: (somewhat poorly named). conversion + builder pattern for converting / constructing from the `geometry/polygon.d` formats.
+* `iteration.d`: iteration + geometry algorithms. needs to be fused / refactored with `geometry/algorithm.d`. warning: bunch of dead non-working code in here. D templates are a hazard as are duck typed and will not trigger compiler errors unless instantiated (not unlike how python works generally, ish - note that D essentially has compile-time dynamic code execution, and did the before / well prior to zig)
+* `serio.d`: serialization formats.
+  * `FLX1`: directly packed memcpy-ed arrays with a small header structure. significantly outperforms `FLX2` in practice, and is not noticably worse w/r data size.
+  * `FLX2`: stores *index* (but not the geometry array) data using `msgpack`. basically worse than `FLX1` in practice, but serves as a control case. still significantly better than the overhead of encoding the entire thing more simply using msgpack. (eg 2 arrays)
 
 ---
+
+**Status:** v0.1 MVP spec
 
 ## Overview
 
